@@ -1,0 +1,3417 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using BLL.Constants;
+using BLL.Classes;
+
+namespace DAL
+{
+    public class TransactionsDALHRMS
+    {
+        #region Leave application Transaction
+        public static List<HRM_Leave_Types> GetLeaveTypes()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Leave_Types.OrderBy(o => o.Leave_Type).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static int ApplicationMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Leave_Master.Where(u => u.Site == Constants.SITE).Select(p => p.Application_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveLeaveMaster(Leave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Leave_Master.Where(u => u.Application_No == entity.ApplicationNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_Leave_Master();
+                        temp.Application_No = entity.ApplicationNo;
+                        temp.Application_Date = entity.ApplicationDate;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_Leave_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Application_Date = entity.ApplicationDate;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteLeaveChild(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_Leave_Child where Application_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+            }
+            catch (Exception)
+            {
+            }
+        }
+        public static void SaveLeaveChild(Leave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_Leave_Child();
+                temp.Application_No = entity.ApplicationNo;
+                temp.Emp_CardNo = entity.EmpCardNo;
+                temp.Leave_Type = entity.LeaveType;
+                temp.From_Date = entity.FromDate;
+                temp.To_Date = entity.ToDate;
+                temp.Total_Leaves = entity.TotalLeaves;
+                temp.Remarks = entity.Remarks;
+                temp.Reason = entity.Reason;
+                temp.Site = Constants.SITE;
+                db.HRM_Leave_Child.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static bool DeleteLeaveRegister(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_Leave_Register where Application_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static void SaveLeaveRegister(Leave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_Leave_Register();
+                temp.Emp_CardNo = entity.EmpCardNo;
+                temp.Application_No = entity.ApplicationNo;
+                temp.Leave_Month = entity.FromDate.Month;
+                temp.Leave_Year = entity.FromDate.Year;
+                temp.Leave_date = entity.FromDate;
+
+                temp.AL_Open = 0;
+                temp.AL_Add = 0;
+                temp.CL_Open = 0;
+                temp.CL_Add = 0;
+                temp.SL_Open = 0;
+                temp.SL_Add = 0;
+                temp.CPL_Add = 0;
+
+                temp.AL_Use = entity.ALUsed;
+                temp.CL_Use = entity.CLUsed;
+                temp.SL_Use = entity.SLUsed;
+                temp.CPL_Use = entity.CPLUsed;
+
+                temp.Site = Constants.SITE;
+                temp.Enter_By = Constants.USER_ID;
+                temp.Entery_Time = DateTime.Now;
+                db.HRM_Leave_Register.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static Leave EditLeaveMaster(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_Leave_Master.Where(u => u.Application_No == applicationNo && u.Site == Constants.SITE).OrderByDescending(u => u.Application_No).Take(1).Select(temp => new Leave
+                    {
+                        ApplicationDate = temp.Application_Date ?? DateTime.Now,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_vew_Leaves> EditLeaveChild(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_Leaves.Where(u => u.Application_No == applicationNo && u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static bool DeleteLeaveRecord(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_Leave_Child where Application_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+                db.Database.ExecuteSqlCommand("Delete from HRM_Leave_Master where Application_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+                db.Database.ExecuteSqlCommand("Delete from HRM_Leave_Register where Application_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static Leave CheckLeave(DateTime attendanceDate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+
+                    return db.HRM_vew_Leaves.Where(u => attendanceDate >= u.From_Date && attendanceDate <= u.To_Date && u.Emp_CardNo == empcard && u.Site == Constants.SITE).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new Leave
+                    {
+                        ApplicationNo = temp.Application_No,
+                        LeaveType = temp.Leave_Type,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static Leave CheckLeave(DateTime fromDate, DateTime toDate, string leaveType, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+
+                    return db.HRM_vew_Leaves.Where(u => u.Leave_Type == leaveType && fromDate >= u.From_Date && toDate <= u.To_Date && u.Emp_CardNo == empcard && u.Site == Constants.SITE).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new Leave
+                    {
+                        ApplicationNo = temp.Application_No,
+                        LeaveType = temp.Leave_Type,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static decimal GetALbalance(int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_LeaveBalances.Where(u => u.Emp_CardNo == cardno).Select(p => p.AL_Balance ?? 0).FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetCLbalance(int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return (db.HRM_vew_LeaveBalances.Where(u => u.Emp_CardNo == cardno).Select(p => p.CL_Balance ?? 0).FirstOrDefault());
+                }
+
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetSLbalance(int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return (db.HRM_vew_LeaveBalances.Where(u => u.Emp_CardNo == cardno).Select(p => p.SL_Balance ?? 0).FirstOrDefault());
+                }
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetCPLbalance(int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return (db.HRM_vew_LeaveBalances.Where(u => u.Emp_CardNo == cardno).Select(p => p.CPL_Balance ?? 0).FirstOrDefault());
+                }
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static Leave GetLeaveAdjustment(int empcard, int leavemonth, int leaveyear)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_Leave_Register.Where(u => u.Emp_CardNo == empcard && u.Leave_Month == leavemonth && u.Leave_Year == leaveyear && u.Application_No == 0 && u.Site == Constants.SITE).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new Leave
+                    {
+                        ALOpen = temp.AL_Open,
+                        CLOpen = temp.CL_Open,
+                        SLOpen = temp.SL_Open,
+                        CPLOpen = temp.CPL_Open,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static bool UpdateLeaveAdjustment(Leave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Leave_Register.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.Leave_Month == entity.LeaveDate.Month && u.Leave_Year == entity.LeaveDate.Year && u.Application_No == 0 && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_Leave_Register();
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Leave_date = entity.LeaveDate;
+                        temp.Leave_Month = entity.LeaveDate.Month;
+                        temp.Leave_Year = entity.LeaveDate.Year;
+                        temp.Application_No = 0;
+
+                        temp.AL_Open = entity.ALOpen;
+                        temp.CL_Open = entity.CLOpen;
+                        temp.SL_Open = entity.SLOpen;
+                        temp.CPL_Open = entity.CPLOpen;
+
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_Leave_Register.Add(temp);
+                        db.SaveChanges();
+                        return true;
+                    }
+                    else
+                    {
+                        temp.Leave_date = entity.LeaveDate;
+
+                        temp.AL_Open = entity.ALOpen;
+                        temp.CL_Open = entity.CLOpen;
+                        temp.SL_Open = entity.SLOpen;
+                        temp.CPL_Open = entity.CPLOpen;
+
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                        return true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static decimal CheckAvailedLeave(DateTime fromDate, DateTime toDate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                //var temp = db.LeavesEntities.Where(u => fromDate >= u.From_Date && toDate <= u.To_Date && u.Emp_CardNo == empcard && u.App_Type == "Availed" &&
+                //                                       u.site == Constants.SITE).Select(p => p.Total_Leaves).FirstOrDefault();
+                return db.Database.SqlQuery<decimal>("SELECT Sum(Total_Leaves) from HRM_Leave_Child WHERE Leave_Type IN ('AL') and Emp_CardNo =" + empcard + " and Month(From_Date) ='" + fromDate.Month +
+                                                        "' and Year(From_Date) ='" + fromDate.Year + "' and Site ='" + Constants.SITE + "'").Sum();
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
+        #endregion
+
+
+
+        #region Evening Salary Transaction
+      
+        public static int EveningSalaryMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_EveningSalary_Master.Where(u => u.Site == Constants.SITE).Select(p => p.Trans_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveEveningSalaryMaster(EveningSalary entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_EveningSalary_Master.Where(u => u.Trans_No == entity.TransNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_EveningSalary_Master();
+                        temp.Trans_No = entity.TransNo;
+                        temp.Trans_Month= entity.TransMonth;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_EveningSalary_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Trans_Month = entity.TransMonth;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteEveningSalaryChild(int applicationNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_EveningSalary_Child where Trans_No='" + applicationNo + "' and site='" + Constants.SITE + "'");
+            }
+            catch (Exception)
+            {
+            }
+        }
+        public static void SaveEveningSalaryChild(EveningSalary entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_EveningSalary_Child();
+                temp.Trans_No = entity.TransNo;
+                temp.Emp_CardNo = entity.EmpCardNo;
+                temp.Salary= entity.Salary;
+                temp.SalaryPer_Lecture= entity.SalaryPerLecture;
+                temp.Subject= entity.Subject;
+                temp.Total_Lectures= entity.TotalLectures;
+                
+                temp.Site = Constants.SITE;
+                db.HRM_EveningSalary_Child.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static EveningSalary GetEveningSalaryMasterInfo(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_EveningSalary.Where(u => u.Trans_No == TransactionNo && u.Site == Constants.SITE).OrderByDescending(u => u.RecNo).Take(1).Select(temp => new EveningSalary
+                    {
+                        TransNo = temp.Trans_No,
+                        TransMonth= temp.Trans_Month ?? DateTime.Now,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_vew_EveningSalary> GetEveningSalaryChildInfo(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_EveningSalary.Where(u => u.Trans_No == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.RecNo).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+        #region Leave Deductions
+
+        public static int LeaveDeductionsMaxNo()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_LeaveDeductions_Master.Where(u => u.Site == Constants.SITE).Select(p => p.TransactionNo).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveLeaveDeductionsChild(LeaveDeductions entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_LeaveDeductions_Child();
+                temp.TransactionNo= entity.TransactionNo;
+                temp.Site = Constants.SITE;
+                temp.DepartmentName = entity.DepartmentName;
+                temp.DesignationName = entity.DesignationName;
+                temp.EMP_CardNo = entity.EmpCardNo;
+                temp.FatherName = entity.FatherName;
+                temp.Name = entity.Name;
+                temp.Leaves = entity.LeavesDeducted;
+                db.HRM_LeaveDeductions_Child.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public static void SaveLeaveDeductionsMaster(LeaveDeductions entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_LeaveDeductions_Master.Where(u => u.TransactionNo == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_LeaveDeductions_Master();
+                        temp.TransactionNo = entity.TransactionNo;
+                        temp.Site = Constants.SITE;
+                        temp.TransactionDate = entity.TransactionDate;
+                        
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_LeaveDeductions_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.TransactionDate = entity.TransactionDate;
+                        
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public static LeaveDeductions GetLeaveDeductionsMasterInfo(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_LeaveDeducitons.Where(u => u.TransactionNo == TransactionNo && u.Site == Constants.SITE).OrderByDescending(u => u.RecNo).Take(1).Select(temp => new LeaveDeductions
+                    {
+                        TransactionNo = temp.TransactionNo,
+                        TransactionDate = temp.TransactionDate ?? DateTime.Now,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_vew_LeaveDeducitons> GetLeaveDeductionsChildInfo(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_LeaveDeducitons.Where(u => u.TransactionNo == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.RecNo).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+    
+
+        public static void DeleteLeaveDeductionsChild(LeaveDeductions entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete From HRM_LeaveDeductions_Child Where TransactionNo=" + entity.TransactionNo+ " and Site='" + Constants.SITE + "'");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public static LeaveDeductions GetLeaveDeductionsInfo(int Emp_CardNo, DateTime ClearanceDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_LeaveDeducitons.Where(u => u.EMP_CardNo == Emp_CardNo && u.TransactionDate.Value.Month == ClearanceDate.Month && u.Site == Constants.SITE && u.TransactionDate.Value.Year == ClearanceDate.Year).Select(temp => new LeaveDeductions
+                    {
+                LeavesDeducted = temp.Leaves ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+
+
+        #endregion
+
+        #region Special Allowance
+
+        public static int SpecialAllowanceMaxNo()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_SpecialAllowance_Master.Where(u => u.Site == Constants.SITE).Select(p => p.TransactionNo).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveSpecialAllowanceChild(SpecialAllowance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_SpecialAllowance_Child();
+                temp.TransactionNo = entity.TransactionNo;
+                temp.Site = Constants.SITE;
+                temp.DepartmentName = entity.DepartmentName;
+                temp.DesignationName = entity.DesignationName;
+                temp.EMP_CardNo = entity.EmpCardNo;
+                temp.FatherName = entity.FatherName;
+                temp.Name = entity.Name;
+                temp.SpecialAllowance = entity.Amount;
+                db.HRM_SpecialAllowance_Child.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public static void SaveSpecialAllowanceMaster(SpecialAllowance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_SpecialAllowance_Master.Where(u => u.TransactionNo == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_SpecialAllowance_Master();
+                        temp.TransactionNo = entity.TransactionNo;
+                        temp.Site = Constants.SITE;
+                        temp.TransactionDate = entity.TransactionDate;
+
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_SpecialAllowance_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.TransactionDate = entity.TransactionDate;
+
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public static SpecialAllowance GetSpecialAllowanceMasterInfo(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_SpecialAllowance.Where(u => u.TransactionNo == TransactionNo && u.Site == Constants.SITE).OrderByDescending(u => u.RecNo).Take(1).Select(temp => new SpecialAllowance
+                    {
+                        TransactionNo = temp.TransactionNo,
+                        TransactionDate = temp.TransactionDate ?? DateTime.Now,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_vew_SpecialAllowance> GetSpecialAllowanceChildInfo(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_SpecialAllowance.Where(u => u.TransactionNo == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.RecNo).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+
+        public static void DeleteSpecialAllowanceChild(SpecialAllowance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete From HRM_SpecialAllowance_Child Where TransactionNo=" + entity.TransactionNo + " and Site='" + Constants.SITE + "'");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        public static SpecialAllowance GetSpecialAllowanceInfo(int Emp_CardNo, DateTime ClearanceDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_SpecialAllowance.Where(u => u.EMP_CardNo == Emp_CardNo && u.TransactionDate.Value.Month == ClearanceDate.Month && u.Site == Constants.SITE && u.TransactionDate.Value.Year == ClearanceDate.Year).Select(temp => new SpecialAllowance
+                    {
+                        Amount = temp.SpecialAllowance ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+
+
+        #endregion
+
+        #region Loan & Advances
+        public static List<HRM_Loan_Types> GetLoanTypes()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return(db.HRM_Loan_Types.OrderBy(o => o.Loan_ID).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static int LoanApplicationMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Loans.Where(u => u.site == Constants.SITE).Select(p => p.App_No).DefaultIfEmpty().Max() + 1);
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static int SaveLoan(Loan entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Loans.Where(u => u.App_No == entity.AppNo && u.site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_Loans();
+                        temp.App_No = entity.AppNo;
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Loan_Date = entity.LoanDate;
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Loan_Amount = entity.LoanAmount;
+                        temp.Loan_Installment = entity.InstallmentAmount;
+                        temp.Entery_Time = DateTime.Now;
+                        temp.site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        db.HRM_Loans.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Loan_Date = entity.LoanDate;
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Loan_Amount = entity.LoanAmount;
+                        temp.Loan_Installment = entity.InstallmentAmount;
+                        temp.Edit_Time = DateTime.Now;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.site = Constants.SITE;
+                        db.SaveChanges();
+                    }
+
+                    return temp.App_No;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public static void SaveLoanInstallment(Employee entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Loan_Deductions.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.Loan_Type==entity.LoanType && u.Deduction_Date == entity.SalaryDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Loan_Deductions();
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Deduction_Date = entity.SalaryDate;
+                        temp.Deduction_Amount = entity.D04;
+                        if (entity.LoanType == "Providant Fund Loan")
+                            temp.Deduction_Amount = entity.D07;
+                        db.Loan_Deductions.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Deduction_Date = entity.SalaryDate;
+                        temp.Deduction_Amount = entity.D04;
+                        if (entity.LoanType == "Providant Fund Loan")
+                            temp.Deduction_Amount = entity.D07;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void SaveLoanReturn(Loan entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Loan_Deductions.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.Loan_Type == entity.LoanType && u.Deduction_Date == entity.LoanDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Loan_Deductions();
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Deduction_Date = entity.LoanDate;
+                        temp.Deduction_Amount = entity.LoanAmount;
+                        db.Loan_Deductions.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Loan_Type = entity.LoanType;
+                        temp.Deduction_Date = entity.LoanDate;
+                        temp.Deduction_Amount = entity.LoanAmount;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteLoanInstallments(string loanType, int empCardNo, DateTime deductionDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (loanType == "")
+                    db.Database.ExecuteSqlCommand($"DELETE FROM Loan_Deductions WHERE Loan_Type IN ('Salary Advance','Long Term Loan','Providant Fund Loan') AND Deduction_Date='{deductionDate}'");
+                else
+                    db.Database.ExecuteSqlCommand($"DELETE FROM Loan_Deductions WHERE Emp_CardNo={empCardNo} and Loan_Type ='{loanType}' AND Deduction_Date='{deductionDate}'");
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static Loan EditLoan(int appNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_Loans.Where(u => u.App_No == appNo && u.site == Constants.SITE).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new Loan
+                    {
+                        AppNo = temp.App_No,
+                        LoanType=temp.Loan_Type ?? "",
+                        LoanDate = temp.Loan_Date ?? DateTime.Now,
+                        EmpCardNo = temp.Emp_CardNo ?? 0,
+                        LoanAmount=temp.Loan_Amount ?? 0,
+                        InstallmentAmount=temp.Loan_Installment ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static Loan EditLoanReturn(string loanType, int empCardNo, DateTime deductionDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Type == loanType && u.Deduction_Date == deductionDate).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new Loan
+                    {
+                        LoanAmount = temp.Deduction_Amount ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static decimal GetTotalAdvances(DateTime fromDate,DateTime toDate, int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Loans.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Date.Value >= fromDate && u.Loan_Date.Value <= toDate && u.Loan_Type == "Salary Advance").Select(p => p.Loan_Amount ?? 0).DefaultIfEmpty().Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalLoan(int empCardNo,string loanType)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Loans.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Type == loanType).Select(p => p.Loan_Amount ?? 0).Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalInstallments(int empCardNo, string loanType)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (loanType == "Providant Fund Loan")
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && (u.Loan_Type == loanType || u.Loan_Type== "PF Loan Return")).Select(p => p.Deduction_Amount ?? 0).Sum());
+                else if (loanType == "PF Profit")
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && (u.Loan_Type == "PF Profit")).Select(p => p.Deduction_Amount ?? 0).Sum());
+                else
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Type == loanType).Select(p => p.Deduction_Amount ?? 0).Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalInstallmentsForSalary(int empCardNo, string loanType, DateTime dedDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (loanType == "Providant Fund Loan")
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && (u.Loan_Type == loanType || u.Loan_Type == "PF Loan Return") && u.Deduction_Date < dedDate).Select(p => p.Deduction_Amount ?? 0).Sum());
+                else if (loanType == "PF Profit")
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && (u.Loan_Type == "PF Profit")).Select(p => p.Deduction_Amount ?? 0).Sum());
+                else
+                    return (db.Loan_Deductions.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Type == loanType && u.Deduction_Date < dedDate).Select(p => p.Deduction_Amount ?? 0).Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetLoanInstallment(int empCardNo, string loanType)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Loans.Where(u => u.Emp_CardNo == empCardNo && u.Loan_Type == loanType).OrderByDescending(o => o.App_No).Select(p => p.Loan_Installment ?? 0).FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static int GetLateArrivals(int empCardNo,DateTime attenDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Machine_Attendance.Where(u => u.Emp_CardNo == empCardNo && u.Attendance_Date<=attenDate && (u.Late_Arrival ?? 0) == 1 && (u.Late_Arrival_Deducted ?? false)== false && ((u.LateArrivalApproval_Status ?? "")=="Rejected" || (u.LateArrivalApproval_Status ?? "")=="")).Select(p => p.Emp_CardNo ?? 0).Count());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static int GetEarlyGoings(int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Machine_Attendance.Where(u => u.Emp_CardNo == empCardNo && (u.Early_Going ?? 0) == 1 && (u.Early_Going_Deducted ?? false) == false && (u.EarlyGoneApproval_Status == "Rejected" || (u.EarlyGoneApproval_Status ?? "") == "")).Select(p => p.Emp_CardNo ?? 0).Count());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static int GetShortLeaves(int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Leave_Child.Where(u => u.Emp_CardNo == empCardNo && u.Leave_Type == "SHL" && (u.ShortLeave_Deducted ?? false) == false && (u.LeaveApproval_Status == "Rejected" || (u.LeaveApproval_Status ?? "") == "")).Select(p => p.Emp_CardNo ?? 0).Count());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+
+        public static void UpdateLateArrivals(int cardno,int lates)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("update top ("+lates+") Machine_Attendance set Late_Arrival_Deducted = 1 where isnull(Late_Arrival_Deducted, 0) = 0 and isnull(Late_Arrival, 0) = 1 and Emp_CardNo = '"+cardno+ "' and (LateArrivalApproval_Status='Rejected' or isnull(LateArrivalApproval_Status,'')='')");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        public static void UpdateEarlyGoings(int cardno, int early)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("update top (" + early + ") Machine_Attendance set Early_Going_Deducted = 1 where isnull(Early_Going_Deducted, 0) = 0 and isnull(Early_Going, 0) = 1 and Emp_CardNo = '" + cardno + "' and (EarlyGoneApproval_Status='Rejected' or isnull(EarlyGoneApproval_Status,'')='')");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        public static void UpdateShortLeaves(int cardno, int leaves)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("update top (" + leaves + ") HRM_Leave_Child set ShortLeave_Deducted = 1 where isnull(ShortLeave_Deducted, 0) = 0 and Leave_Type = 'SHL' and Emp_CardNo = '" + cardno + "' and (LeaveApproval_Status='Rejected' or isnull(LeaveApproval_Status,'')='')");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        public static void UpdateSalaryCreatedStatus(DateTime salarydate,int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (cardno>0)
+                    db.Database.ExecuteSqlCommand("update Monthly_Salary set Salary_Created = 1 where Salary_Month = '"+salarydate.Month+"' and Salary_Year = '"+salarydate.Year+"' and Emp_CardNo = '" + cardno + "'");
+                else
+                    db.Database.ExecuteSqlCommand("update Monthly_Salary set Salary_Created = 1 where Salary_Month = '" + salarydate.Month + "' and Salary_Year = '" + salarydate.Year + "'");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        public static bool CheckSalaryCreated(DateTime leavedate,int cardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (cardno>0)
+                    return db.Monthly_Salary.Where(u => u.Salary_Month == leavedate.Month && u.Salary_Year==leavedate.Year && u.Emp_CardNo==cardno && u.site == Constants.SITE).Select(p => p.Salary_Created ?? false).FirstOrDefault();
+                else
+                    return db.Monthly_Salary.Where(u => u.Salary_Month == leavedate.Month && u.Salary_Year == leavedate.Year && u.site == Constants.SITE).Select(p => p.Salary_Created ?? false).FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region Gazetted Leave
+        public static int GazettedLeaveMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Gazetted_Leaves.Where(u => u.site == Constants.SITE).Select(p => p.Leave_ID).DefaultIfEmpty().Max() + 1);
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveGazettedLeave(Leave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Gazetted_Leaves.Where(u => u.Leave_ID == entity.ApplicationNo && u.site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Gazetted_Leaves();
+                        temp.Leave_ID = entity.ApplicationNo;
+                        temp.Leave_Date = entity.LeaveDate;
+                        temp.Leave_Name = entity.LeaveType;
+                        temp.site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.Gazetted_Leaves.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Leave_Date = entity.LeaveDate;
+                        temp.Leave_Name = entity.LeaveType;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public static Leave EditGazettedLeave(int srno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.Gazetted_Leaves.Where(u => u.Leave_ID == srno && u.site == Constants.SITE).OrderByDescending(u => u.Leave_ID).Take(1).Select(temp => new Leave
+                    {
+                        ApplicationNo = temp.Leave_ID,
+                        LeaveDate = temp.Leave_Date ?? DateTime.Now,
+                        LeaveType = temp.Leave_Name,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static bool CheckGazettedLeave(DateTime leavedate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Gazetted_Leaves.Where(u => u.Leave_Date == leavedate && u.site == Constants.SITE).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static string CheckGazettedLeaveName(DateTime leavedate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.Gazetted_Leaves.Where(u => u.Leave_Date == leavedate && u.site == Constants.SITE).Select(p=>p.Leave_Name).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+        #endregion
+
+
+        #region Leave Application
+        public static int GetLeaveApplicationMaxNo()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_LeaveApplication.Where(u => u.Site == Constants.SITE).Select(p => p.TransNo).DefaultIfEmpty().Max()) + 1;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        public static void SaveLeaveApplication(LeaveApplication entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_LeaveApplication.Where(u => u.TransNo == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_LeaveApplication();
+                        temp.TransNo = entity.TransactionNo;
+                        temp.TransDate = entity.TransactionDate;
+                        temp.Assignment = entity.Assignment;
+                        temp.Leave_Date= entity.LeaveDate;
+                        temp.Emp_CardNo = entity.Emp_CardNo;
+                        temp.FromDate = entity.FromDate;
+                        temp.Leave_Required= entity.LeaveRequired;
+                        temp.Leave_Type= entity.LeaveType;
+                        temp.ToDate = entity.ToDate;
+                        temp.MoreThan_One= entity.MoreThanOne;
+                        temp.Reason= entity.Reason;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_LeaveApplication.Add(temp);
+                        db.SaveChanges();
+
+                    }
+                    else
+                    {
+                        temp.TransDate = entity.TransactionDate;
+                        temp.Assignment = entity.Assignment;
+                        temp.Leave_Date = entity.LeaveDate;
+                        temp.Emp_CardNo = entity.Emp_CardNo;
+                        temp.FromDate = entity.FromDate;
+                        temp.Leave_Required = entity.LeaveRequired;
+                        temp.Leave_Type = entity.LeaveType;
+                        temp.ToDate = entity.ToDate;
+                        temp.MoreThan_One = entity.MoreThanOne;
+                        temp.Reason = entity.Reason;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static LeaveApplication EditLeaveApplication(int TransNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_LeaveApplication.Where(u => u.TransNo == TransNo && u.Site == Constants.SITE).OrderByDescending(u => u.TransNo).Take(1).Select(temp => new LeaveApplication
+                    {
+                        TransactionNo = temp.TransNo,
+                        TransactionDate = temp.TransDate ?? DateTime.Now,
+                        Assignment= temp.Assignment ?? "",
+                        LeaveDate= temp.Leave_Date ?? DateTime.Now,
+                        Emp_CardNo = temp.Emp_CardNo ?? 0,
+                        FromDate = temp.FromDate ?? DateTime.Now,
+                        LeaveRequired= temp.Leave_Required ?? 0,
+                        LeaveType= temp.Leave_Type ?? "",
+                        MoreThanOne= temp.MoreThan_One ?? false,
+                        ToDate = temp.ToDate ?? DateTime.Now,
+                        Reason= temp.Reason,
+                        Emp_Name = temp.Emp_Name ?? "",
+                        DesignationName = temp.Designation_Name,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+
+        #region Short Leave
+        public static int GetShortLeaveMaxNo()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_ShortLeave.Where(u => u.Site == Constants.SITE).Select(p => p.TransNo).DefaultIfEmpty().Max()) + 1;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        public static void SaveShortLeave(ShortLeave entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_ShortLeave.Where(u => u.TransNo == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_ShortLeave();
+                        temp.TransNo = entity.TransactionNo;
+                        temp.TransDate = entity.TransactionDate;
+                        temp.Leave_Date = entity.LeaveDate;
+                        temp.Emp_CardNo = entity.Emp_CardNo;
+                        temp.FromTime = entity.FromTime;
+                        temp.Leave_Type = entity.LeaveType;
+                        temp.ToTime = entity.ToTime;
+                        temp.Reason = entity.Reason;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_ShortLeave.Add(temp);
+                        db.SaveChanges();
+
+                    }
+                    else
+                    {
+                        temp.TransDate = entity.TransactionDate;
+                        temp.Leave_Date = entity.LeaveDate;
+                        temp.Emp_CardNo = entity.Emp_CardNo;
+                        temp.FromTime = entity.FromTime;
+                        temp.Leave_Type = entity.LeaveType;
+                        temp.ToTime = entity.ToTime;
+                        temp.Reason = entity.Reason;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static ShortLeave EditShortLeave(int TransNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_ShortLeave.Where(u => u.TransNo == TransNo && u.Site == Constants.SITE).OrderByDescending(u => u.TransNo).Take(1).Select(temp => new ShortLeave
+                    {
+                        TransactionNo = temp.TransNo,
+                        TransactionDate = temp.TransDate ?? DateTime.Now,
+                        LeaveDate = temp.Leave_Date ?? DateTime.Now,
+                        Emp_CardNo = temp.Emp_CardNo ?? 0,
+                        FromTime = temp.FromTime ?? DateTime.Now,
+                        LeaveType = temp.Leave_Type ?? "",
+                        ToTime = temp.Totime ?? DateTime.Now,
+                        Reason = temp.Reason,
+                        Emp_Name = temp.Emp_Name ?? "",
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+
+        #region ATTENDANCE
+        public static int UpdateMachineAttendance(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static int CountEmployeesLate(int EmpCard,DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Machine_Attendance.Where(u => u.Emp_CardNo == EmpCard && u.Late_Allowed==1 && u.Attendance_Date>= fromDate && u.Attendance_Date <= toDate).Select(p => p.Late_Arrival).Count());
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static int UpdateMachineAttendanceIN(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate && u.In_Status == true).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.In_Status = entity.Instatus;
+                        temp.In_Image = entity.InImage;
+                        temp.Action = entity.Action;
+                        temp.Hours_ToWork = entity.WorkingHours;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Late_Minutes = entity.LateMinutes;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        temp.Absent = entity.Absent;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static int UpdateMachineAttendanceOUT(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate && u.In_Status == true).FirstOrDefault();
+                    if (temp == null && entity.AttendanceDate == temp.Attendance_Date)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Out_Status = entity.outStatus;
+                        temp.Out_Image = entity.OutImage;
+                        temp.Action = entity.Action;
+                        temp.Early_Going = entity.EarlyGoing;
+                        temp.Early_Minutes = entity.EarlyMinutes;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else if (temp.Attendance_Type == "Machine")
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Out_Status = entity.outStatus;
+                        temp.Out_Image = entity.OutImage;
+                        temp.Action = entity.Action;
+                        temp.Early_Going = entity.EarlyGoing;
+                        temp.Early_Minutes = entity.EarlyMinutes;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<Machine_Attendance> GetEmployeeAttendanceMachineSelected(DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Machine_Attendance.Where(u => u.Attendance_Date.Value >= fromDate && u.Attendance_Date.Value <= toDate).ToList().OrderBy(o => o.Emp_CardNo);
+                if (temp != null)
+                {
+                    return temp.ToList<Machine_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+        public static List<Machine_Attendance> GetEmployeeAttendanceMachineSelected(DateTime fromDate, DateTime toDate, int cardNO)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == cardNO && u.Attendance_Date.Value >= fromDate && u.Attendance_Date.Value <= toDate).ToList().OrderBy(o => o.Emp_CardNo);
+                if (temp != null)
+                {
+                    return temp.ToList<Machine_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+        public static int UpdateDailyAttendance(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Daily_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.In_Date.Value == entity.TimeIn).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Daily_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Total_Seconds = entity.TotalSeconds;
+                        temp.Total_Hours = entity.TotalHours;
+                        temp.Total_Late = entity.TotalLateMinutes;
+                        temp.inoutno = entity.InOutNo;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Early_Going = entity.EarlyGoing;
+                        temp.Hours_ToWork = entity.WorkingHours;
+                        temp.Remarks = entity.Remarks;
+                        temp.Absent = entity.Absent;
+                        temp.Site = Constants.SITE;
+                        temp.enterby = Constants.USER_ID;
+                        db.Daily_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Total_Seconds = entity.TotalSeconds;
+                        temp.Total_Hours = entity.TotalHours;
+                        temp.Total_Late = entity.TotalLateMinutes;
+                        temp.inoutno = entity.InOutNo;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Early_Going = entity.EarlyGoing;
+                        temp.Hours_ToWork = entity.WorkingHours;
+                        temp.Remarks = entity.Remarks;
+                        temp.Absent = entity.Absent;
+                        temp.Site = Constants.SITE;
+                        temp.enterby = Constants.USER_ID;
+                        db.SaveChanges();
+                    }
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<Machine_Attendance> GetEmployeeAttendanceMachine(DateTime attendate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Machine_Attendance.Where(u => u.Attendance_Date.Value.Month == attendate.Month && u.Emp_CardNo == empcard).ToList().OrderBy(o => o.Attendance_Date);
+                if (temp != null)
+                {
+                    return temp.ToList<Machine_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<vew_Daily_Attendance> GetEmployeeAttendanceLateEarly(DateTime attendate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.vew_Daily_Attendance.Where(u => u.Attendance_Date.Value == attendate && (((u.Late_Arrival ?? 0)== 1 && (u.Late_Arrival_Deducted ?? false)==false) || ((u.Early_Going ?? 0) == 1 && (u.Early_Going_Deducted ?? false) == false))).ToList().OrderBy(o => o.Emp_CardNo);
+                if (temp != null)
+                {
+                    return temp.ToList<vew_Daily_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void DeleteAbsentees()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    db.Database.ExecuteSqlCommand("Truncate Table Absentees");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static int SaveAbsentees(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Absentees.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Absentee();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        db.Absentees.Add(temp);
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteTimeCard()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    db.Database.ExecuteSqlCommand("Truncate Table Time_Card");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static List<vew_Daily_Attendance> GetEmployeeAttendanceList(DateTime attndate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.vew_Daily_Attendance.Where(u => u.Emp_CardNo == empcard && u.Attendance_Date.Value == attndate).ToList().OrderBy(o => o.Attendance_Date);
+                if (temp != null)
+                {
+                    return temp.ToList<vew_Daily_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static int SaveTimeCard(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Time_Card.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Time_Card();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Emp_Name = entity.EmpName;
+                        temp.Dept_Name = entity.DepartmentName;
+                        temp.Desg_Name = entity.DesignationName;
+                        temp.Joining_Date = entity.EmpJoiningDate;
+                        temp.Shift = entity.EmpShift;
+                        temp.In_Time = entity.InTimeDefine;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Attnedance_Type = entity.AttendanceType;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Early_Going = entity.EarlyGoing;
+                        temp.Remarks = entity.Remarks;
+                        temp.daycount = entity.TotalDays;
+                        db.Time_Card.Add(temp);
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static Attendance CheckEmployeeDailyAttendance(DateTime attendate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.Daily_Attendance.Where(u => u.Attendance_Date == attendate && u.Emp_CardNo == empcard).OrderBy(u => u.Attendance_Date).Take(1).Select(temp => new Attendance
+                    {
+                        AttendanceDate = temp.Attendance_Date ?? DateTime.Now,
+                        //InTime =temp.In_Date.HasValue ? "null" : temp.In_Date,
+                        TimeIn = temp.In_Date ?? DateTime.Now,
+                        TimeOut = temp.Out_Date ?? DateTime.Now,
+                        LateArrival=temp.Late_Arrival ?? 0,
+                        Absent=temp.Absent ?? false,
+                        Remarks=temp.Remarks ?? "",
+                        EarlyGoing = temp.Early_Going ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static bool DeleteAttendance(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        db.Machine_Attendance.Remove(temp);
+                        db.SaveChanges();
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteFromTemp_DailyAttenAll()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    db.Database.ExecuteSqlCommand("Truncate Table Temp_DailyAttenAll ");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public static void DeleteFromMachineAttendance(int empCardNo, bool cardWise, DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    if (cardWise == true)
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Machine_Attendance where Emp_CardNo=" + empCardNo + " and Attendance_Date between'" + fromDate + "' and '" + toDate + "' and Attendance_Type='Machine'");
+                    }
+                    else
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Machine_Attendance where Attendance_Date between'" + fromDate + "' and '" + toDate + "' and Attendance_Type='Machine'");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void DeleteFromDailyAttendance(int empCardNo, bool cardWise, DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    if (cardWise == true)
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Daily_Attendance where Emp_CardNo=" + empCardNo + " and Attendance_Date between '" + fromDate + "' and '" + toDate + "'");
+                    }
+                    else
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Daily_Attendance where Attendance_Date between '" + fromDate + "' and '" + toDate + "'");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void DeleteFromAttendanceRegister(int empCardNo, bool cardWise, DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    if (cardWise == true)
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Attendance_Register where Emp_CardNo=" + empCardNo + " and Attendance_Date between '" + fromDate + "' and '" + toDate + "'");
+                    }
+                    else
+                    {
+                        db.Database.ExecuteSqlCommand("Delete from Attendance_Register where Attendance_Date between '" + fromDate + "' and '" + toDate + "'");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        public static bool CheckEmployeeIN(DateTime attendate, int empcardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Machine_Attendance.Where(u => u.Attendance_Date == attendate && u.Emp_CardNo == empcardno && u.In_Status == true).Select(p => p.Emp_CardNo).FirstOrDefault();
+                if (temp != null)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static int GetEmployeeWorkingHours(DateTime attendate, int empcardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Attendance_Register.Where(u => u.Attendance_Date == attendate && u.Emp_CardNo == empcardno).Select(p => p.Total_Seconds ?? 0).Sum());
+                
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static int UpdateManualAttendanceIN(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.In_Status = entity.Instatus;
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        temp.Remarks = entity.Remarks;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.In_Date = Convert.ToDateTime(entity.TimeIn);
+                        temp.In_Status = entity.Instatus;
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        temp.Remarks = entity.Remarks;
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static int UpdateManualAttendanceOUT(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null && entity.AttendanceDate == temp.Attendance_Date)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Out_Status = entity.outStatus;
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        temp.Remarks = entity.Remarks;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Out_Date = Convert.ToDateTime(entity.TimeOut);
+                        temp.Out_Status = entity.outStatus;
+                        temp.Action = entity.Action;
+                        temp.Attendance_Type = entity.AttendanceType;
+                        temp.Remarks = entity.Remarks;
+                        db.SaveChanges();
+                    }
+
+                    return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void UpdateLateEarlyReason(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Machine_Attendance.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Machine_Attendance();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Late_Early_Reason = entity.Reason;
+                        db.Machine_Attendance.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Late_Early_Reason = entity.Reason;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<Daily_Attendance> GetDailyInOut(DateTime attendate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Daily_Attendance.Where(u => u.Attendance_Date == attendate).ToList().OrderBy(o => o.Emp_CardNo);
+                if (temp != null)
+                {
+                    return temp.ToList<Daily_Attendance>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static Attendance GetDailyInOut(DateTime attendate, int empcardno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.Daily_Attendance.Where(u => u.Attendance_Date == attendate && u.Emp_CardNo == empcardno).OrderBy(u => u.Attendance_Date).Take(1).Select(temp => new Attendance
+                    {
+                        AttendanceDate = temp.Attendance_Date ?? DateTime.Now,
+                        //InTime =temp.In_Date.HasValue ? "null" : temp.In_Date,
+                        TimeIn = temp.In_Date ?? DateTime.Now,
+                        TimeOut = temp.Out_Date ?? DateTime.Now,
+                        LateArrival=temp.Late_Arrival ?? 0,
+                        EarlyGoing=temp.Early_Going ?? 0,
+                        Absent=temp.Absent ?? false,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static void SaveAttendanceAll(Employee entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+
+                    var temp = new Temp_DailyAttenAll();
+                    temp.Emp_CardNo = entity.EmpCardNo;
+                    temp.Emp_Name = entity.EmpName;
+                    temp.Desg_Name = entity.DesignationName;
+                    temp.Dept_Name = entity.DepartmentName;
+                    temp.Rest_Day = entity.RestDay;
+                    temp.Grade = entity.Grade;
+                    temp.Attendance_Date = entity.AttendanceDate;
+                    temp.Attendance_Status = entity.AttendanceType;
+                    temp.In_Time = entity.InTime;
+                    temp.Out_Time = entity.OutTime;
+                    db.Temp_DailyAttenAll.Add(temp);
+                    db.SaveChanges();
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void SaveAttendanceRegister(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Attendance_Register.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Attendance_Register();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Attnedance_Type = entity.AttendanceType;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Early_Gone = entity.EarlyGoing;
+                        temp.Total_Seconds = entity.TotalSeconds;
+                        temp.Total_Hours = entity.TotalHours;
+                        temp.Total_Late = entity.TotalLateMinutes;
+                        temp.Total_Days = entity.TotalDays;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        db.Attendance_Register.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate;
+                        temp.Attnedance_Type = entity.AttendanceType;
+                        temp.Late_Arrival = entity.LateArrival;
+                        temp.Early_Gone = entity.EarlyGoing;
+                        temp.Total_Seconds = entity.TotalSeconds;
+                        temp.Total_Hours = entity.TotalHours;
+                        temp.Total_Late = entity.TotalLateMinutes;
+                        temp.Total_Days = entity.TotalDays;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        db.SaveChanges();
+                    }
+                    //return Convert.ToInt32(temp.Emp_CardNo);
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void UpdateAttendanceRegister(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Attendance_Register.Where(u => u.Emp_CardNo == entity.EmpCard && u.Attendance_Date == entity.AttendanceDate).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Attendance_Register();
+                        temp.Emp_CardNo = entity.EmpCard;
+                        temp.Attendance_Date = entity.AttendanceDate.Date;
+                        temp.Attnedance_Type = entity.AttendanceType;
+                        temp.Total_Days = entity.TotalDays;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        db.Attendance_Register.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Attnedance_Type = entity.AttendanceType;
+                        temp.Total_Days = entity.TotalDays;
+                        temp.Enter_By = Constants.USER_ID;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<Attendance_Register> GetEmployeeAttendance(DateTime fromDate,DateTime toDate, int empcard)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Attendance_Register.Where(u => u.Emp_CardNo == empcard && u.Attendance_Date >= fromDate.Date && u.Attendance_Date <= toDate.Date).ToList().OrderBy(o => o.Attendance_Date);
+                if (temp != null)
+                {
+                    return temp.ToList<Attendance_Register>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static int GetEmployeeNosMachine(DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                var db = DB.CreateMachine();
+                return(db.Database.SqlQuery<MCH_vew_Attendance>("select * from MCH_vew_Attendance where convert(date,CHECKTIME) between '" + fromDate + "' and '" + toDate + "' order by NAME,CHECKTIME").Count());
+                //int attnlist = db.Database.SqlQuery<MCH_vew_Attendance>("select * from MCH_vew_Attendance where convert(date,Date_Time) between '" + fromDate + "' and '" + toDate + "' order by Date_Time").Count();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static List<MCH_vew_Attendance> GetAttendanceFromMachineData(DateTime fromDate, DateTime toDate, int cardNO)
+        {
+            try
+            {
+                var db = DB.CreateMachine();
+                if (cardNO > 0)
+                    return (db.Database.SqlQuery<MCH_vew_Attendance>("select * from MCH_vew_Attendance where BADGENUMBER=" + cardNO + " and convert(date,CHECKTIME) between '" + fromDate + "' and '" + toDate + "' order by NAME,CHECKTIME").ToList());
+                else
+                    return (db.Database.SqlQuery<MCH_vew_Attendance>("select * from MCH_vew_Attendance where convert(date,CHECKTIME) between '" + fromDate + "' and '" + toDate + "' order by NAME,CHECKTIME").ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<USERINFO> GetEmployeesFromMachineData(int cardNo)
+        {
+            try
+            {
+                var db = DB.CreateMachine();
+                List<USERINFO> lst = new List<USERINFO>();
+                if (cardNo > 0)
+                    lst = (db.Database.SqlQuery<USERINFO>(string.Format("select * from USERINFO where BADGENUMBER='{0}' order by BADGENUMBER", cardNo)).ToList());
+                else
+                {
+                    // string qry = "";
+                    lst = (db.Database.SqlQuery<USERINFO>(string.Format("select * from USERINFO order by BADGENUMBER")).ToList());
+                    // lst = (db.Database.SqlQuery<USERINFO>(qry).ToList());
+                }
+
+                return lst;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void SaveMachineAttendanceOnline(Attendance entity)
+        {
+            try
+            {
+                var db = DB.CreateMachineOnline();
+                {
+                    var temp = db.CHECKINOUT.Where(u => u.USERID == entity.UserID && u.CHECKTIME == entity.CheckTime).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new CHECKINOUT();
+                        temp.CHECKTIME = entity.CheckTime;
+                        temp.CHECKTYPE = entity.CheckType;
+                        temp.SENSORID = entity.SensorID;
+                        temp.USERID = entity.UserID;
+                        temp.VERIFYCODE = entity.VerifyCode;
+                        db.CHECKINOUT.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.CHECKTYPE = entity.CheckType;
+                        temp.SENSORID = entity.SensorID;
+                        temp.VERIFYCODE = entity.VerifyCode;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void SaveMachineEmployeesOnline(UserInfoEntity entity)
+        {
+            try
+            {
+                var db = DB.CreateMachineOnline();
+                {
+                    var temp = db.USERINFO.Where(u => u.BADGENUMBER == entity.BADGENUMBER).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new USERINFO();
+                        temp.ATT = entity.ATT;
+                        temp.BADGENUMBER = entity.BADGENUMBER;
+                        temp.BIRTHDAY = entity.BIRTHDAY;
+                        temp.CITY = entity.CITY;
+                        temp.DEFAULTDEPTID = entity.DEFAULTDEPTID;
+
+                        temp.FPHONE = entity.FPHONE;
+                        temp.GENDER = entity.GENDER;
+                        temp.HIREDDAY = entity.HIREDDAY;
+                        temp.HOLIDAY = entity.HOLIDAY;
+                        temp.INLATE = entity.INLATE;
+
+                        temp.LUNCHDURATION = entity.LUNCHDURATION;
+                        temp.MINZU = entity.MINZU;
+                        temp.MVerifyPass = entity.MVerifyPass;
+                        temp.NAME = entity.NAME;
+                        temp.OPHONE = entity.OPHONE;
+
+                        temp.OUTEARLY = entity.OUTEARLY;
+                        temp.OVERTIME = entity.OVERTIME;
+                        temp.PAGER = entity.PAGER;
+                        temp.PASSWORD = entity.PASSWORD;
+                        temp.PHOTO = entity.PHOTO;
+
+                        temp.SECURITYFLAGS = entity.SECURITYFLAGS;
+                        temp.SEP = entity.SEP;
+                        temp.SSN = entity.SSN;
+                        temp.STATE = entity.STATE;
+                        temp.STREET = entity.STREET;
+
+                        temp.TITLE = entity.TITLE;
+                        //  temp.USERID= entity.UserID;
+                        temp.VERIFICATIONMETHOD = entity.VERIFICATIONMETHOD;
+                        temp.ZIP = entity.ZIP;
+
+
+                        db.USERINFO.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.ATT = entity.ATT;
+                        temp.BIRTHDAY = entity.BIRTHDAY;
+                        temp.CITY = entity.CITY;
+                        temp.DEFAULTDEPTID = entity.DEFAULTDEPTID;
+
+                        temp.FPHONE = entity.FPHONE;
+                        temp.GENDER = entity.GENDER;
+                        temp.HIREDDAY = entity.HIREDDAY;
+                        temp.HOLIDAY = entity.HOLIDAY;
+                        temp.INLATE = entity.INLATE;
+
+                        temp.LUNCHDURATION = entity.LUNCHDURATION;
+                        temp.MINZU = entity.MINZU;
+                        temp.MVerifyPass = entity.MVerifyPass;
+                        temp.NAME = entity.NAME;
+                        temp.OPHONE = entity.OPHONE;
+
+                        temp.OUTEARLY = entity.OUTEARLY;
+                        temp.OVERTIME = entity.OVERTIME;
+                        temp.PAGER = entity.PAGER;
+                        temp.PASSWORD = entity.PASSWORD;
+                        temp.PHOTO = entity.PHOTO;
+
+                        temp.SECURITYFLAGS = entity.SECURITYFLAGS;
+                        temp.SEP = entity.SEP;
+                        temp.SSN = entity.SSN;
+                        temp.STATE = entity.STATE;
+                        temp.STREET = entity.STREET;
+
+                        temp.TITLE = entity.TITLE;
+                        temp.VERIFICATIONMETHOD = entity.VERIFICATIONMETHOD;
+                        temp.ZIP = entity.ZIP;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static int GetEmployeeNosMachine(DateTime fromDate, DateTime toDate, int cardNO)
+        {
+            try
+            {
+                var db = DB.CreateMachine();
+                if (cardNO > 0)
+                    return (db.Database.SqlQuery<MCH_vew_Attendance>(string.Format("select * from MCH_vew_Attendance where BADGENUMBER='{0}' and convert(date,CHECKTIME) between '{1}' and '{2}' order by BADGENUMBER,CHECKTIME", cardNO, fromDate, toDate)).Count());
+                else
+                    return (db.Database.SqlQuery<MCH_vew_Attendance>(string.Format("select * from MCH_vew_Attendance where convert(date,CHECKTIME) between '{0}' and '{1}' order by BADGENUMBER,CHECKTIME", fromDate, toDate)).Count());
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+
+        #endregion
+
+        #region Salary
+        public static void SaveMonthlySalary(Employee entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.Monthly_Salary.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.Salary_Month == entity.SalaryMonth && u.Salary_Year == entity.SalaryYear).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new Monthly_Salary();
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Salary_Month = entity.SalaryMonth;
+                        temp.Salary_Year = entity.SalaryYear;
+                        temp.Salary_Date = entity.SalaryDate;
+                        temp.salary = entity.Salary;
+                        temp.Days = entity.TotalDays;
+                        temp.Days_Amount = entity.DaysAmount;
+                        temp.OverTime_Days = entity.OverTimeDays;
+                        temp.OverTime_Amount = entity.OverTimeAmount;
+                        temp.Other_Days = entity.OtherDays;
+                        temp.Other_Amount = entity.OtherAmount;
+                        temp.Total_Late = entity.TotalLate;
+                        temp.Late_Deduction = entity.LateDeduction;
+                        temp.LongTerm_LoanBalance = entity.LongTermLoanBalance;
+                        temp.Provident_FundLoanBalance = entity.ProvidentFundLoanBalance;
+                        temp.BASIC_Pay = entity.BasicPay;
+                        temp.A01 = entity.A01;
+                        temp.A02 = entity.A02;
+                        temp.A03 = entity.A03;
+                        temp.A04 = entity.A04;
+                        temp.A05 = entity.A05;
+                        temp.A06 = entity.A06;
+                        temp.A07 = entity.A07;
+                        temp.A08 = entity.A08;
+                        temp.A09 = entity.A09;
+                        temp.A10 = entity.A10;
+                        temp.A11 = entity.A11;
+                        temp.A12 = entity.A12;
+                        temp.A13 = entity.A13;
+                        temp.GROSS_Pay = entity.GrossPay;
+                        temp.D01 = entity.D01;
+                        temp.D02 = entity.D02;
+                        temp.D03 = entity.D03;
+                        temp.D04 = entity.D04;
+                        temp.D05 = entity.D05;
+                        temp.D06 = entity.D06;
+                        temp.D07 = entity.D07;
+                        temp.D08 = entity.D08;
+                        temp.D09 = entity.D09;
+                        temp.D10 = entity.D10;
+                        temp.D11 = entity.D11;
+                        temp.PF_SchoolShare = entity.PFSchoolShare;
+                        temp.EOBI_SchoolShare = entity.EOBISchoolShare;
+                        temp.Leave_Deducted = entity.LeaveDeductions;
+                      //  temp.Leave_Deduction_Amount = entity.LeaveDeductionsAmount;
+                        temp.NET_Pay = entity.NetSalary;
+                        temp.Total_ProvidentFund = entity.TotalProvidentFund;
+                        temp.Total_Deductions = entity.TotalDeductions;
+                        temp.Scale = entity.Scale;
+
+                        temp.site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.Monthly_Salary.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Salary_Date = entity.SalaryDate;
+                        temp.salary = entity.Salary;
+                        temp.Days = entity.TotalDays;
+                        temp.Days_Amount = entity.DaysAmount;
+                        temp.OverTime_Days = entity.OverTimeDays;
+                        temp.OverTime_Amount = entity.OverTimeAmount;
+                        temp.Other_Days = entity.OtherDays;
+                        temp.Other_Amount = entity.OtherAmount;
+                        temp.Total_Late = entity.TotalLate;
+                        temp.Late_Deduction = entity.LateDeduction;
+                        temp.LongTerm_LoanBalance = entity.LongTermLoanBalance;
+                        temp.Provident_FundLoanBalance = entity.ProvidentFundLoanBalance;
+                        temp.BASIC_Pay = entity.BasicPay;
+                        temp.A01 = entity.A01;
+                        temp.A02 = entity.A02;
+                        temp.A03 = entity.A03;
+                        temp.A04 = entity.A04;
+                        temp.A05 = entity.A05;
+                        temp.A06 = entity.A06;
+                        temp.A07 = entity.A07;
+                        temp.A08 = entity.A08;
+                        temp.A09 = entity.A09;
+                        temp.A10 = entity.A10;
+                        temp.A11 = entity.A11;
+                        temp.A12 = entity.A12;
+                        temp.A13 = entity.A13;
+                        temp.GROSS_Pay = entity.GrossPay;
+                        temp.D01 = entity.D01;
+                        temp.D02 = entity.D02;
+                        temp.D03 = entity.D03;
+                        temp.D04 = entity.D04;
+                        temp.D05 = entity.D05;
+                        temp.D06 = entity.D06;
+                        temp.D07 = entity.D07;
+                        temp.D08 = entity.D08;
+                        temp.D09 = entity.D09;
+                        temp.D10 = entity.D10;
+                        temp.D11 = entity.D11;
+                        temp.PF_SchoolShare = entity.PFSchoolShare;
+                        temp.EOBI_SchoolShare = entity.EOBISchoolShare;
+                        temp.Leave_Deducted = entity.LeaveDeductions;
+                       // temp.Leave_Deduction_Amount = entity.LeaveDeductionsAmount;
+                        temp.NET_Pay = entity.NetSalary;
+                        temp.Total_ProvidentFund = entity.TotalProvidentFund;
+                        temp.Total_Deductions = entity.TotalDeductions;
+                        temp.Scale = entity.Scale;
+
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static bool DeleteMonthlySalarySingle(Employee entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    //db.Database.ExecuteSqlCommand("Delete from SCH_Fee where Fee_Month='" + entity.FeeMonth + "' and Fee_Year='" + entity.FeeYear + "' and site='" + Constants.LOGED_IN_SITE + "'");
+
+                    var temp = db.Monthly_Salary.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.Salary_Month == entity.SalaryMonth && u.Salary_Year == entity.SalaryYear).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        db.Monthly_Salary.Remove(temp);
+                        db.SaveChanges();
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public static bool DeleteMonthlySalary(int salaryMonth,int salaryYear)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("DELETE FROM Monthly_Salary WHERE Salary_Month=" + salaryMonth + " and Salary_Year=" + salaryYear + "");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public static decimal GetTotalAbsents(DateTime fromDate, DateTime toDate, int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Attendance_Register.Where(u => u.Emp_CardNo == empCardNo && u.Attendance_Date.Value >= fromDate && u.Attendance_Date.Value <= toDate && u.Total_Days == 0 && u.Attnedance_Type == "A").Select(p => p.Total_Days ?? 0).Count());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalDays(DateTime fromDate, DateTime toDate, int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Attendance_Register.Where(u => u.Emp_CardNo == empCardNo && u.Attendance_Date.Value >= fromDate && u.Attendance_Date.Value <= toDate && u.Total_Days == 1).Select(p => p.Total_Days ?? 0).Count());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalPFund(DateTime salaryDate, int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Monthly_Salary.Where(u => u.Emp_CardNo == empCardNo && u.Salary_Date < salaryDate && u.site == Constants.SITE).Select(p => p.D01 ?? 0).Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static decimal GetTotalPfSchoolShare(DateTime salaryDate, int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.Monthly_Salary.Where(u => u.Emp_CardNo == empCardNo && u.Salary_Date < salaryDate && u.site == Constants.SITE).Select(p => p.PF_SchoolShare ?? 0).Sum());
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+        public static Employee GetMonthlySalary(int empCardNo, DateTime salaryMonth)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.vew_Salary.Where(u => u.Emp_CardNo == empCardNo && u.Salary_Month == salaryMonth.Month && u.Salary_Year == salaryMonth.Year && u.site == Constants.SITE).Select(temp => new Employee
+                    {
+                        EmpCardNo = temp.Emp_CardNo,
+                        EmpName = temp.Emp_Name,
+                        EmpFatherName = temp.Emp_FatherName,
+                        DepartmentName = temp.Department_Name,
+                        EmpCategory = temp.Category,
+                        TotalDays = temp.Days ?? 0,
+                        DaysAmount = temp.Days_Amount ?? 0,
+                        OverTimeDays = temp.Other_Days ?? 0,
+                        OverTimeAmount = temp.OverTime_Amount ?? 0,
+                        OtherDays = temp.Other_Days ?? 0,
+                        OtherAmount = temp.Other_Amount ?? 0,
+                        TotalLate = temp.Total_Late ?? 0,
+                        LateDeduction = temp.Late_Deduction ?? 0,
+                        GrossPay = temp.GROSS_Pay ?? 0,
+                        LongTermLoanBalance=temp.LongTerm_LoanBalance ?? 0,
+                        ProvidentFundLoanBalance=temp.Provident_FundLoanBalance ?? 0,
+                        TotalProvidentFund=temp.Total_ProvidentFund ?? 0,
+                        Salary = temp.salary ?? 0,
+                        BasicPay = temp.BASIC_Pay ?? 0,
+                        A01 = temp.A01 ?? 0,
+                        A02 = temp.A02 ?? 0,
+                        A03 = temp.A03 ?? 0,
+                        A04 = temp.A04 ?? 0,
+                        A05 = temp.A05 ?? 0,
+                        A06 = temp.A06 ?? 0,
+                        A07 = temp.A07 ?? 0,
+                        A08 = temp.A08 ?? 0,
+                        A09 = temp.A09 ?? 0,
+                        A10 = temp.A10 ?? 0,
+                        A11 = temp.A11 ?? 0,
+                        A12 = temp.A12 ?? 0,
+                        A13 = temp.A13 ?? 0,
+                        D01 = temp.D01 ?? 0,
+                        D02 = temp.D02 ?? 0,
+                        D03 = temp.D03 ?? 0,
+                        D04 = temp.D04 ?? 0,
+                        D05 = temp.D05 ?? 0,
+                        D06 = temp.D06 ?? 0,
+                        D07 = temp.D07 ?? 0,
+                        D08 = temp.D08 ?? 0,
+                        D09 = temp.D09 ?? 0,
+                        D10 = temp.D10 ?? 0,
+                        D11 = temp.D11 ?? 0,
+                        PFSchoolShare = temp.PF_SchoolShare ?? 0,
+                        EOBISchoolShare = temp.EOBI_SchoolShare ?? 0,
+                        // LeaveDeductionsAmount = temp.Leave_Deduction_Amount ?? 0,
+                        LeaveDeductions =temp.Leave_Deducted ?? 0,
+                        NetSalary = temp.NET_Pay ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static int GetTotalEmployeeSalarySlipForEmail(DateTime salaryDate, int empCardNo, int departmentID)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (empCardNo > 0)
+                    return (db.vew_Salary.Where(u => u.Emp_CardNo==empCardNo && u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).Select(p => p.Emp_CardNo).DefaultIfEmpty().Count());
+                else if (departmentID > 0)
+                    return (db.vew_Salary.Where(u => u.Dept_Code == departmentID && u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).Select(p => p.Emp_CardNo).DefaultIfEmpty().Count());
+                else
+                    return (db.vew_Salary.Where(u => u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).Select(p => p.Emp_CardNo).DefaultIfEmpty().Count());
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static List<vew_Salary> GetEmployeeSalaryListForEmail(DateTime salaryDate,int empCardNo, int departmentID)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                if (empCardNo > 0)
+                    return (db.vew_Salary.Where(u => u.Emp_CardNo==empCardNo && u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).OrderBy(o => o.Emp_CardNo).ToList());
+                else if (departmentID > 0)
+                    return (db.vew_Salary.Where(u => u.Dept_Code == departmentID && u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).OrderBy(o => o.Emp_CardNo).ToList());
+                else
+                    return (db.vew_Salary.Where(u => u.Salary_Month == salaryDate.Month && u.Salary_Year == salaryDate.Year && u.Email != "" && u.site == Constants.SITE).OrderBy(o => o.Emp_CardNo).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        #endregion
+
+        #region OverTime
+        public static int OverTimeMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.OverTime_Master.Where(u => u.Site == Constants.SITE).Select(p => p.OverTime_No).DefaultIfEmpty().Max() + 1);
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveOverTimeMaster(OverTime entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.OverTime_Master.Where(u => u.OverTime_No == entity.OverTimeNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new OverTime_Master();
+                        temp.OverTime_No = entity.OverTimeNo;
+                        temp.OverTime_Date = entity.OverTimeDate;
+                        temp.OverTime_Gazetted = entity.OverTimeGazetted;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.OverTime_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.OverTime_Date = entity.OverTimeDate;
+                        temp.OverTime_Gazetted = entity.OverTimeGazetted;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        temp.Site = Constants.SITE;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public static void SaveOverTimechild(OverTime childEntity)
+        {
+            try
+            {
+                var _Entities = DB.CreateMainHRMS();
+                {
+                    var temp = new OverTime_Child();
+                    temp.OverTime_No = childEntity.OverTimeNo;
+                    temp.Site = Constants.SITE;
+                    temp.Emp_CardNo = childEntity.EmpCardNo;
+                    temp.From_Time = childEntity.FromTime;
+                    temp.To_Time = childEntity.ToTime;
+                    temp.OverTime = childEntity.OverTimeHours;
+                    temp.OverTime_Amount = childEntity.OverTimeAmount;
+                    _Entities.OverTime_Child.Add(temp);
+                    _Entities.SaveChanges();
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void DeleteOverTimeChild(OverTime entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("DELETE FROM OverTime_Child WHERE OverTime_No='" + entity.OverTimeNo + "' AND Site='" + Constants.SITE + "'");
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+        public static OverTime EditOverTimeMaster(int srno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.OverTime_Master.Where(u => u.OverTime_No == srno && u.Site == Constants.SITE).OrderByDescending(u => u.OverTime_No).Take(1).Select(temp => new OverTime
+                    {
+                        OverTimeNo = temp.OverTime_No,
+                        OverTimeDate = temp.OverTime_Date ?? DateTime.Today,
+                        OverTimeGazetted = temp.OverTime_Gazetted,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static List<Vew_OverTime> EditOverTimeChild(int srno)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = db.Vew_OverTime.Where(u => u.OverTime_No == srno && u.Site == Constants.SITE).ToList().OrderBy(o => o.Serial_No);
+                if (temp != null)
+                {
+                    return temp.ToList<Vew_OverTime>();
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        #endregion
+
+        #region Update Salary Breakup
+
+        public static int UpdateSalaryBreakupMaxNo()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_UpdateSalaryBreakup_Master.Where(u => u.Site == Constants.SITE).Select(p => p.Transaction_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveUpdateSalaryBreakupMaster(UpdateSalaryBreakup entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_UpdateSalaryBreakup_Master.Where(u => u.Transaction_No == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_UpdateSalaryBreakup_Master();
+                        temp.Transaction_No = entity.TransactionNo;
+                        temp.Site = Constants.SITE;
+                        temp.Transaction_Date = entity.TransactionDate;
+
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_UpdateSalaryBreakup_Master.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Transaction_Date = entity.TransactionDate;
+
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static void SaveUpdateSalaryBreakupChild(UpdateSalaryBreakup entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_UpdateSalaryBreakup_Child();
+                temp.Transaction_No = entity.TransactionNo;
+                temp.Site = Constants.SITE;
+                temp.EMP_CardNo = entity.EmpCardNo;
+                temp.Name = entity.Name;
+                temp.Basic_Pay = entity.BasicPay;
+                temp.Twenty_Percent  = entity.twentyPerc;
+                temp.House_Rent = entity.HouseRent;
+                temp.ThirtyFive_Percent = entity.ThirtyFivePerc;
+                temp.Conveyance = entity.Conveyance;
+                temp.ADH1 = entity.ADH1;
+                temp.ADH2 = entity.ADH2;
+                temp.ADH3 = entity.ADH3;
+                temp.Allowance = entity.Allowance;
+                temp.Twenty_Percent1 = entity.twentyPerc1;
+                temp.Provident_Fund = entity.ProvidentFund;
+                temp.EOBI = entity.EOBI;
+                temp.Gross_Pay = entity.GrossPay;
+                temp.Allowances = entity.allowances;
+
+                temp.D_Advance = entity.D_Advance;
+                temp.D_EOBI = entity.D_EOBI;
+                temp.D_Loan = entity.D_Loan;
+                temp.D_Lvs = entity.D_Lvs;
+                temp.D_Provident_Fund = entity.D_ProvidentFund;
+                temp.D_Tax = entity.D_Tax;
+                temp.Net_Pay = entity.NetPay;
+                db.HRM_UpdateSalaryBreakup_Child.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static UpdateSalaryBreakup GetUpdateSalaryBreakupMasterInfo(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_UpdateSalaryBreakup.Where(u => u.Transaction_No == TransactionNo && u.Site == Constants.SITE).OrderByDescending(u => u.RecNo).Take(1).Select(temp => new UpdateSalaryBreakup
+                    {
+                        TransactionNo = temp.Transaction_No,
+                        TransactionDate = temp.Transaction_Date ?? DateTime.Now,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_vew_UpdateSalaryBreakup> GetUpdateSalaryBreakupChildInfo(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_vew_UpdateSalaryBreakup.Where(u => u.Transaction_No == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.RecNo).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void DeleteUpdateSalaryBreakupChild(UpdateSalaryBreakup entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete From HRM_UpdateSalaryBreakup_Child Where Transaction_No=" + entity.TransactionNo + " and Site='" + Constants.SITE + "'");
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+        public static void UpdateEmployeeSalaryBreakup(UpdateSalaryBreakup entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Employee_Salary.Where(u => u.Emp_CardNo == entity.EmpCardNo && u.site == Constants.SITE).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        temp.Basic_Pay = entity.BasicPay;
+                        temp.A01 = entity.twentyPerc;
+                        temp.A02 = entity.ThirtyFivePerc;
+                        temp.A03 = entity.HouseRent;
+                        temp.A04 = entity.Conveyance;
+                        temp.A05 = entity.ADH1;
+                        temp.A06 = entity.ADH2;
+                        temp.A07 = entity.ADH3;
+                        temp.A08 = entity.Allowance;
+                        temp.A09 = entity.twentyPerc1;
+                        temp.A10 = entity.ProvidentFund;
+                        temp.A11 = entity.EOBI;
+                        temp.A12 = entity.allowances;
+
+                        temp.Gross_Pay = entity.GrossPay;
+                        temp.D01 = entity.D_ProvidentFund;
+                        temp.D02 = entity.D_EOBI;
+                        temp.D03 = entity.D_Advance;
+                        temp.D04 = entity.D_Loan;
+                        temp.D05 = entity.D_Tax;
+                        temp.D06 = entity.D_Lvs;
+                        temp.Net_Pay = entity.NetPay;
+                  //      temp.A12 = entity.HouseRent;
+                        db.SaveChanges();
+                    }
+                    //db.Database.ExecuteSqlCommand("Update Emp_Salary set Gross_Pay=Basic_Pay+isnull(A01,0)+isnull(A02,0)+isnull(A03,0)+isnull(A04,0)+isnull(A05,0)+isnull(A06,0)+isnull(A07,0)+isnull(A08,0)+isnull(A09,0)+isnull(A10,0)+isnull(A11,0)+isnull(A12,0)");
+                    //db.Database.ExecuteSqlCommand("Update Emp_Salary set Net_Pay=Gross_Pay-isnull(D01,0)-isnull(D02,0)-isnull(D03,0)-isnull(D04,0)-isnull(D05,0)-isnull(D06,0)-isnull(D07,0)-isnull(D08,0)-isnull(D09,0)-isnull(D10,0)-isnull(D11,0)-isnull(D12,0)");
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        #endregion
+
+
+        #region Final Settlement
+        public static int FinalSettlementMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Final_Settlement.Where(u => u.Site == Constants.SITE).Select(p => p.Transaction_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static int CheckSettlement(int cardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_Final_Settlement.Where(u => u.Emp_CardNo == cardNo && u.Site == Constants.SITE).Select(p => p.Transaction_No).FirstOrDefault());
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static void SaveFinalSettlement(FinalSettlement entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Final_Settlement.Where(u => u.Transaction_No == entity.TransactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new HRM_Final_Settlement();
+                        temp.Transaction_No = entity.TransactionNo;
+                        temp.Transaction_Date = entity.TransactionDate;
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Leaving_Type = entity.LeavingType;
+                        temp.Leaving_Date = entity.LeavingDate;
+                        temp.Salary_Days = entity.SalaryDays;
+                        temp.Salary_Month = entity.SalaryMonth;
+                        temp.Salary_Amount = entity.SalaryAmount;
+
+                        temp.Total_Salary = entity.TotalSalary;
+                        temp.Other_Payable = entity.OtherPayable;
+                        temp.Graduity_Percent = entity.GraduityPercent;
+                        temp.Graduity_Days = entity.GraduityDays;
+                        temp.Graduity_Amount = entity.GraduityAmount;
+                        temp.Leaves_Payable = entity.LeavesPayable;
+                        temp.Leaves_Type = entity.LeavesType;
+                        temp.Leaves_Amount = entity.LeavesAmount;
+                        temp.Notice_Days = entity.NoticeDays;
+                        temp.Notice_Amount = entity.NoticeDaysAmount;
+                        temp.Loan_Amount = entity.LoanAdvance;
+                        temp.EOBI = entity.EOBI;
+                        temp.Other_Deductions = entity.OtherDeductions;
+                        temp.Payable_Amount = entity.PayableAmount;
+                        temp.Income_Tax = entity.IncomeTax;
+                        temp.Provident_Fund = entity.ProvidentFund;
+                        temp.Provident_Fund_Profit = entity.ProvidentFundProfit;
+                        temp.Site = Constants.SITE;
+                        temp.Enter_By = Constants.USER_ID;
+                        temp.Entery_Time = DateTime.Now;
+                        db.HRM_Final_Settlement.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.Transaction_Date = entity.TransactionDate;
+                        temp.Emp_CardNo = entity.EmpCardNo;
+                        temp.Leaving_Type = entity.LeavingType;
+                        temp.Leaving_Date = entity.LeavingDate;
+                        temp.Salary_Days = entity.SalaryDays;
+                        temp.Salary_Month = entity.SalaryMonth;
+                        temp.Salary_Amount = entity.SalaryAmount;
+
+                        temp.Total_Salary = entity.TotalSalary;
+                        temp.Graduity_Percent = entity.GraduityPercent;
+                        temp.Graduity_Days = entity.GraduityDays;
+                        temp.Graduity_Amount = entity.GraduityAmount;
+                        temp.Leaves_Payable = entity.LeavesPayable;
+                        temp.Leaves_Type = entity.LeavesType;
+                        temp.Leaves_Amount = entity.LeavesAmount;
+                        temp.Notice_Days = entity.NoticeDays;
+                        temp.Income_Tax = entity.IncomeTax;
+
+                        temp.Notice_Amount = entity.NoticeDaysAmount;
+                        temp.Loan_Amount = entity.LoanAdvance;
+                        temp.EOBI = entity.EOBI;
+                        temp.Other_Deductions = entity.OtherDeductions;
+                        temp.Payable_Amount = entity.PayableAmount;
+                        temp.Provident_Fund = entity.ProvidentFund;
+                        temp.Provident_Fund_Profit = entity.ProvidentFundProfit;
+                        temp.Edit_By = Constants.USER_ID;
+                        temp.Edit_Time = DateTime.Now;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static FinalSettlement EditFinalSettlement(int settlementNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_FinalSettlement.Where(u => u.Transaction_No == settlementNo && u.Site == Constants.SITE).OrderByDescending(u => u.Transaction_No).Take(1).Select(temp => new FinalSettlement
+                    {
+                        TransactionNo = temp.Transaction_No,
+                        TransactionDate = temp.Transaction_Date ?? DateTime.Today,
+                        EmpCardNo = temp.Emp_CardNo ?? 0,
+                        EmpName = temp.Emp_Name ?? "",
+                        Department = temp.Department_Name ?? "",
+                        EmpFatherName = temp.Emp_FatherName,
+                        CNIC = temp.CNIC,
+                        Designation = temp.Designation_Name ?? "",
+                        JoiningDate = temp.Joining_Date ?? DateTime.Now,
+                        GrossPay = temp.Gross_Pay ?? 0,
+                        BasicPay = temp.Basic_Pay ?? 0,
+                        LeavingType = temp.Leaving_Type ?? "",
+                        LeavingDate = temp.Leaving_Date ?? DateTime.Now,
+                        SalaryDays = temp.Salary_Days ?? 0,
+                        SalaryMonth = temp.Salary_Month ?? DateTime.Now,
+                        SalaryAmount = temp.Salary_Amount ?? 0,
+
+                        TotalSalary = temp.Total_Salary ?? 0,
+                        OtherPayable = temp.Other_Payable ?? 0,
+                        GraduityPercent = temp.Graduity_Percent ?? 0,
+                        GraduityDays = temp.Graduity_Days ?? 0,
+
+                        IncomeTax = temp.Income_Tax ?? 0,
+                        GraduityAmount = temp.Graduity_Amount ?? 0,
+                        LeavesPayable = temp.Leaves_Payable ?? 0,
+                        LeavesType = temp.Leaves_Type ?? "",
+                        LeavesAmount = temp.Leaves_Amount ?? 0,
+                        NoticeDays = temp.Notice_Days ?? 0,
+                        NoticeDaysAmount = temp.Notice_Amount ?? 0,
+                        LoanAdvance = temp.Loan_Amount ?? 0,
+                        EOBI = temp.EOBI ?? 0,
+                        OtherDeductions = temp.Other_Deductions ?? 0,
+                        PayableAmount = temp.Payable_Amount ?? 0,
+                        ProvidentFund = temp.Provident_Fund ?? 0,
+                        ProvidentFundProfit = temp.Provident_Fund_Profit ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static FinalSettlement EditFinalSettlementCardNo(int cardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    return db.HRM_vew_FinalSettlement.Where(u => u.Emp_CardNo == cardNo && u.Site == Constants.SITE).OrderByDescending(u => u.Emp_CardNo).Take(1).Select(temp => new FinalSettlement
+                    {
+                        TransactionNo = temp.Transaction_No,
+                        TransactionDate = temp.Transaction_Date ?? DateTime.Today,
+                        EmpCardNo = temp.Emp_CardNo ?? 0,
+                        EmpName = temp.Emp_Name ?? "",
+                        Department = temp.Department_Name ?? "",
+                        Designation = temp.Designation_Name ?? "",
+                        EmpFatherName = temp.Emp_FatherName,
+                        CNIC = temp.CNIC,
+                        JoiningDate = temp.Joining_Date ?? DateTime.Now,
+                        GrossPay = temp.Gross_Pay ?? 0,
+                        BasicPay = temp.Basic_Pay ?? 0,
+                        LeavingType = temp.Leaving_Type ?? "",
+                        LeavingDate = temp.Leaving_Date ?? DateTime.Now,
+                        SalaryDays = temp.Salary_Days ?? 0,
+                        SalaryMonth = temp.Salary_Month ?? DateTime.Now,
+                        SalaryAmount = temp.Salary_Amount ?? 0,
+                        IncomeTax = temp.Income_Tax ?? 0,
+                        TotalSalary = temp.Total_Salary ?? 0,
+                        OtherPayable = temp.Other_Payable ?? 0,
+                        GraduityPercent = temp.Graduity_Percent ?? 0,
+                        GraduityDays = temp.Graduity_Days ?? 0,
+                        GraduityAmount = temp.Graduity_Amount ?? 0,
+                        LeavesPayable = temp.Leaves_Payable ?? 0,
+                        LeavesAmount = temp.Leaves_Amount ?? 0,
+                        NoticeDays = temp.Notice_Days ?? 0,
+                        NoticeDaysAmount = temp.Notice_Amount ?? 0,
+                        LoanAdvance = temp.Loan_Amount ?? 0,
+                        EOBI = temp.EOBI ?? 0,
+                        OtherDeductions = temp.Other_Deductions ?? 0,
+                        PayableAmount = temp.Payable_Amount ?? 0,
+                        ProvidentFund = temp.Provident_Fund ?? 0,
+                        ProvidentFundProfit = temp.Provident_Fund_Profit ?? 0,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+        public static bool UpdateEmployeeFinalSettlement(int empCardNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Employee.Where(u => u.Emp_CardNo == empCardNo && u.site == Constants.SITE).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        //   temp.FinalSettlement_Status = true;
+                        db.SaveChanges();
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static bool DeleteFinalSettlement(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                {
+                    var temp = db.HRM_Final_Settlement.Where(u => u.Transaction_No == transactionNo && u.Site == Constants.SITE).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        db.HRM_Final_Settlement.Remove(temp);
+                        db.SaveChanges();
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Out Time Transaction
+
+        public static int OutTimeMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_OutTime.Where(u => u.Site == Constants.SITE).Select(p => p.Transaction_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+     
+        public static void DeleteOutTime(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_OutTime where Transaction_No='" + TransactionNo + "' and site='" + Constants.SITE + "'");
+            }
+            catch (Exception)
+            {
+            }
+        }
+        public static void SaveOutTime(OutTime entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_OutTime();
+                temp.Transaction_No = entity.TransactionNo;
+                temp.Department_Code= entity.DeptCode;
+                temp.Attendance_Date= entity.AttendanceDate;
+                temp.Out_Time= entity.Out_Time;
+                temp.Reason = entity.Reason;
+                temp.Enter_By = Constants.USER_ID;
+                temp.Entery_Time = DateTime.Now;
+                temp.Site = Constants.SITE;
+                db.HRM_OutTime.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<HRM_OutTime> EditOutTime(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_OutTime.Where(u => u.Transaction_No == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_OutTime> GetOutTimeOnDate(int deptcode,DateTime attendanceDate)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_OutTime.Where(u => u.Department_Code == deptcode && u.Attendance_Date==attendanceDate && u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        #endregion
+
+        #region In Time Transaction
+
+        public static int InTimeMaxNO()
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_InTime.Where(u => u.Site == Constants.SITE).Select(p => p.Transaction_No).DefaultIfEmpty().Max() + 1);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public static void DeleteInTime(int TransactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                db.Database.ExecuteSqlCommand("Delete from HRM_InTime where Transaction_No='" + TransactionNo + "' and site='" + Constants.SITE + "'");
+            }
+            catch (Exception)
+            {
+            }
+        }
+        public static void SaveInTime(InTime entity)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                var temp = new HRM_InTime();
+                temp.Transaction_No = entity.TransactionNo;
+                temp.Department_Code = entity.DeptCode;
+                temp.Attendance_Date = entity.AttendanceDate;
+                temp.In_Time = entity.In_Time;
+                temp.Reason = entity.Reason;
+                temp.Attendance_Type = entity.AttendanceType;
+                temp.Emp_CardNo = entity.CardNo;
+                temp.Emp_Name = entity.Name;
+                temp.Enter_By = Constants.USER_ID;
+                temp.Entery_Time = DateTime.Now;
+                temp.Site = Constants.SITE;
+                db.HRM_InTime.Add(temp);
+                db.SaveChanges();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        public static List<HRM_InTime> EditInTime(int transactionNo)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_InTime.Where(u => u.Transaction_No == transactionNo && u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<HRM_InTime> GetInTimeOnDate(int cardno, DateTime attendanceDate,string type)
+        {
+            try
+            {
+                var db = DB.CreateMainHRMS();
+                return (db.HRM_InTime.Where(u => u.Emp_CardNo == cardno && u.Attendance_Date == attendanceDate && u.Attendance_Type==type && u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        #endregion
+    }
+}

@@ -1,0 +1,243 @@
+using Microsoft.AspNetCore.Mvc;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
+using System.Collections.Concurrent;
+using System.Web;
+using HRMS.Application.Services;
+using backend.Models.HRMS;
+
+namespace HRMS.Controllers.HR
+{
+    [Route("iclock")] 
+    [Route("api/v1/iclock")]
+    [ApiController]
+    public class ZkTecoADMSController : ControllerBase
+    {
+        private readonly IAttendanceService _attendanceService;
+
+        // An in-memory queue to hold commands for specific Serial Numbers.
+        private static readonly ConcurrentDictionary<string, ConcurrentQueue<string>> _commandQueue = new();
+        private static int _commandIdCounter = 1;
+
+        public ZkTecoADMSController(IAttendanceService attendanceService)
+        {
+            _attendanceService = attendanceService;
+        }
+
+        // --- 1. HANDSHAKE ---
+        [HttpGet("cdata")]
+        public IActionResult Handshake([FromQuery] string SN)
+        {
+            string response = $"GET OPTION FROM:{SN}\nStamp=9999\nOpStamp=9999\nErrorDelay=60\nDelay=30\nTransTimes=00:00;14:00\nTransInterval=1\nTransFlag=1111000000\nTimeZone=05:00\nRealtime=1\nEncrypt=0\n";
+            return Content(response, "text/plain");
+        }
+
+        // --- 2. RECEIVE DATA (Your original logic merged back in) ---
+        [HttpPost("cdata")]
+        [Consumes("application/octet-stream", "text/plain", "application/json", "application/x-www-form-urlencoded", "multipart/form-data")]
+        public async Task<IActionResult> ReceiveData([FromQuery] string SN, [FromQuery] string table, [FromQuery] string? machineId = null)
+        {
+            Console.WriteLine($"[ADMS] Data Push - SN: {SN}, Table: {table}, Length: {Request.ContentLength}, Type: {Request.ContentType}");
+            
+            if (table == "ATTLOG")
+            {
+                Request.EnableBuffering();
+                var recordsToImport = new List<HrmAttendanceMachineRecord>();
+
+                using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+                {
+                    string? line;
+                    while ((line = await reader.ReadLineAsync()) != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        Console.WriteLine($"[ADMS] Processing line: {line}");
+                        
+                        var parts = line.Split('\t');
+                        if (parts.Length >= 4)
+                        {
+                            var userIdStr = parts[0];
+                            var verifyDateStr = parts[1]; 
+                            var verifyStateStr = parts[2]; 
+                            var verifyTypeStr = parts[3]; 
+
+                            if (int.TryParse(userIdStr, out int empCardNo) && 
+                                DateTime.TryParse(verifyDateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime verifyDate))
+                            {
+                                int.TryParse(verifyTypeStr, out int verifyCode);
+
+                                int mId = 0;
+                                if (!string.IsNullOrEmpty(machineId) && int.TryParse(machineId, out int parsedId))
+                                {
+                                    mId = parsedId;
+                                }
+                                else if (Request.Query.TryGetValue("deviceId", out var dIdStr) && int.TryParse(dIdStr, out int parsedDId))
+                                {
+                                    mId = parsedDId;
+                                }
+                                else
+                                {
+                                    string numericSN = System.Text.RegularExpressions.Regex.Replace(SN ?? "", "[^0-9]", "");
+                                    int.TryParse(numericSN.Length > 9 ? numericSN.Substring(numericSN.Length - 9) : numericSN, out mId);
+                                }
+
+                                string attendanceType = "Machine";
+                                if (mId == 243800293 || SN == "243800293" || mId == 102)
+                                {
+                                    mId = 102;
+                                    attendanceType = "I";
+                                }
+                                else if (mId == 244900205 || SN == "244900205" || mId == 101)
+                                {
+                                    mId = 101;
+                                    attendanceType = "O";
+                                }
+
+                                recordsToImport.Add(new HrmAttendanceMachineRecord
+                                {
+                                    EmpCardNo = empCardNo,
+                                    AttendanceDate = verifyDate.Date,
+                                    AttendanceTime = verifyDate,
+                                    AttendanceType = attendanceType,
+                                    VerifyCode = verifyCode,
+                                    MachineId = mId,   
+                                    Site = "PPI",      
+                                    EmpName = SN       
+                                });
+                                Console.WriteLine($"[ADMS] Successfully parsed punch: Emp={empCardNo}, Time={verifyDate:yyyy-MM-dd HH:mm:ss}, MachineId={mId}, Type={attendanceType}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[ADMS] Failed to parse line. UserID='{userIdStr}', VerifyDate='{verifyDateStr}'");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[ADMS] Line has insufficient parts ({parts.Length}): {line}");
+                        }
+                    }
+                }
+
+                if (recordsToImport.Count > 0)
+                {
+                    try
+                    {
+                        Console.WriteLine($"[ADMS] Importing {recordsToImport.Count} records to database...");
+                        await _attendanceService.ImportRawRecordsAsync(recordsToImport);
+                        Console.WriteLine($"[ADMS] Successfully imported records.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ADMS] Error processing records: {ex.Message}");
+                        Console.WriteLine(ex.StackTrace);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[ADMS] No valid records found to import from the payload.");
+                }
+            }
+
+            return Content("OK\n", "text/plain");
+        }
+
+        // --- 3. GET COMMANDS (Device polls this) ---
+        [HttpGet("getrequest")]
+        public IActionResult GetRequest([FromQuery] string SN)
+        {
+            if (_commandQueue.TryGetValue(SN, out var queue) && queue.TryDequeue(out var command))
+            {
+                int cmdId = System.Threading.Interlocked.Increment(ref _commandIdCounter);
+                string response = $"C:{cmdId}:{command}\n";
+                
+                Console.WriteLine($"[ADMS] Sending Command to {SN}: {response.Trim()}");
+                return Content(response, "text/plain");
+            }
+
+            return Content("OK\n", "text/plain");
+        }
+
+        // --- 4. COMMAND RESULTS (Device posts success/fail here) ---
+        [HttpPost("devicecmd")]
+        public async Task<IActionResult> DeviceCommandResult([FromQuery] string SN)
+        {
+            using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+            var resultData = await reader.ReadToEndAsync();
+            
+            Console.WriteLine($"[ADMS] Command Result from {SN}: {resultData}");
+            return Content("OK\n", "text/plain");
+        }
+
+        // --- 5. TRIGGER SYNC (You call this to queue the command) ---
+        // I changed the route to a relative path to fix that 404 error you got earlier.
+        [HttpPost("force-sync")] 
+        public IActionResult QueueForceSync([FromQuery] string SN)
+        {
+            if (string.IsNullOrWhiteSpace(SN))
+                return BadRequest("Serial Number is required.");
+
+            var queue = _commandQueue.GetOrAdd(SN, _ => new ConcurrentQueue<string>());
+            
+            string commandString = "DATA QUERY ATTLOG StartTime=2000-01-01 00:00:00 EndTime=2099-12-31 23:59:59";
+            
+            queue.Enqueue(commandString);
+
+            return Ok(new { Message = $"Sync command successfully queued. The device ({SN}) will execute it on its next heartbeat." });
+        }
+
+        // --- 6. READ ATT LOG (Matches the 'ReadAttlog' button functionality in the prototype) ---
+        [HttpPost("read-attlog")]
+        public IActionResult ReadAttLog([FromQuery] string SN, [FromQuery] string? startTime, [FromQuery] string? endTime)
+        {
+            if (string.IsNullOrWhiteSpace(SN))
+                return BadRequest("Serial Number is required.");
+
+            var queue = _commandQueue.GetOrAdd(SN, _ => new ConcurrentQueue<string>());
+
+            // Command format for querying logs. 
+            // If startTime and endTime are provided (like in the prototype's 'period' mode), we use them.
+            // Otherwise, we send a general query for all logs.
+            string commandString;
+            if (!string.IsNullOrEmpty(startTime) && !string.IsNullOrEmpty(endTime))
+            {
+                commandString = $"DATA QUERY ATTLOG StartTime={startTime} EndTime={endTime}";
+            }
+            else
+            {
+                // General query to fetch all logs
+                commandString = "DATA QUERY ATTLOG"; 
+            }
+
+            queue.Enqueue(commandString);
+            Console.WriteLine($"[ADMS] Queued ReadAttLog for {SN}: {commandString}");
+
+            return Ok(new 
+            { 
+                Message = "Attendance log request queued. The device will push the data to the server on its next poll.", 
+                SN = SN, 
+                Command = commandString 
+            });
+        }
+
+        // --- 7. READ NEW LOG (Matches the 'ReadNewLog' button in the prototype) ---
+        [HttpPost("read-new-log")]
+        public IActionResult ReadNewLog([FromQuery] string SN)
+        {
+            if (string.IsNullOrWhiteSpace(SN))
+                return BadRequest("Serial Number is required.");
+
+            var queue = _commandQueue.GetOrAdd(SN, _ => new ConcurrentQueue<string>());
+            
+            // In ADMS, 'CHECK' tells the device to upload any new records it hasn't sent yet.
+            string commandString = "CHECK"; 
+            
+            queue.Enqueue(commandString);
+            Console.WriteLine($"[ADMS] Queued ReadNewLog (CHECK) for {SN}");
+
+            return Ok(new { Message = "Read New Log command (CHECK) queued successfully.", SN = SN });
+        }
+    }
+}

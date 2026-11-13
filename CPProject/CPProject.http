@@ -1,0 +1,12 @@
+@SaftProject_HostAddress = http://localhost:5020
+
+GET {{SaftProject_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+### Get salary units for employee forms
+GET {{SaftProject_HostAddress}}/api/hr/define/unit/list
+Accept: application/json
+
+###

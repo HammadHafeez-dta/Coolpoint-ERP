@@ -1,0 +1,38 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using backend.Models.HRMS;
+
+namespace HRMS.Application.Services
+{
+    public class AttendanceService : IAttendanceService
+    {
+        private readonly HRMSDbContext _context;
+
+        public AttendanceService(HRMSDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task ImportRawRecordsAsync(List<HrmAttendanceMachineRecord> records)
+        {
+            if (records == null || records.Count == 0) return;
+
+            try
+            {
+                await _context.HrmAttendanceMachineRecords.AddRangeAsync(records);
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"[AttendanceService] Successfully saved {records.Count} records to the database.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AttendanceService] Error saving records to database: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[AttendanceService] Inner Exception: {ex.InnerException.Message}");
+                }
+                throw;
+            }
+        }
+    }
+}

@@ -1,0 +1,15 @@
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\bin\Release\net8.0\CPCRM.API.deps.json
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\bin\Release\net8.0\CPCRM.API.runtimeconfig.json
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\bin\Release\net8.0\CPCRM.API.dll
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\bin\Release\net8.0\CPCRM.API.pdb
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.csproj.AssemblyReference.cache
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.GeneratedMSBuildEditorConfig.editorconfig
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.AssemblyInfoInputs.cache
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.AssemblyInfo.cs
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.csproj.CoreCompileInputs.cache
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.sourcelink.json
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.dll
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\refint\CPCRM.API.dll
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.pdb
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\CPCRM.API.genruntimeconfig.cache
+F:\Synctecho Soft\Software\CoolPoint\cp_hamad\backend\CPCRM.API\obj\Release\net8.0\ref\CPCRM.API.dll

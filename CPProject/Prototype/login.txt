@@ -1,0 +1,669 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using BLL.Classes;
+using BLL.Constants;
+
+namespace DAL
+{
+    public class LoginDAL
+    {
+        #region User
+        public static List<tbl_Users> GetAdminUsers()
+        {
+
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_Users.Where(u => u.User_Level == "A").OrderBy(o => o.User_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<tbl_Users> GetLimitedUsers()
+        {
+
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_Users.Where(u => u.User_Level == "U").OrderBy(o => o.User_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<tbl_Users> GetAllUsers()
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                return(db.tbl_Users.OrderBy(o => o.User_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void Get_UsersList()
+        {
+            try
+            {
+                List<User> user = new List<User>();
+                foreach (var temp in LoginDAL.GetAllUsers())
+                {
+                    user.Add(new User
+                    {
+                        UserNo = temp.User_No,
+                        UserID = temp.User_ID,
+                        UserName = temp.User_Name,
+                        UserLevel = temp.User_Level,
+                        UserPassward = temp.User_Passward,
+                        Picture = temp.User_Picture
+                    });
+                }
+                Constants.UsersList = user;
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+        public static List<tbl_Users_Child> GetUserChildsList()
+        {
+
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_Users_Child.Where(u => u.Site == Constants.SITE).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void Get_GetUserChildsList()
+        {
+            try
+            {
+                List<User> user = new List<User>();
+                List<tbl_Users_Child> userChildsList = new List<tbl_Users_Child>();
+                userChildsList = LoginDAL.GetUserChildsList();
+                if (userChildsList == null)
+                    return;
+                foreach (var temp in userChildsList)
+                {
+                    user.Add(new User
+                    {
+                        UserNo = temp.User_No ?? 0,
+                        SoftwareName = temp.Software_Name,
+                    });
+                }
+                Constants.UserChildsList = user;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public static User AuthecticateUser(User userID)
+        {
+            try
+            {
+                var context = DB.CreateCommon();
+                {
+                    var temp = context.tbl_Users.Where(u => u.User_ID.Trim() == userID.UserID && u.User_Passward.Trim() == userID.UserPassward).FirstOrDefault();
+                    User entity = new User();
+                    if (temp != null)
+                    {
+                        entity.UserNo = temp.User_No;
+                        Constants.USER_ID = temp.User_ID;
+                        Constants.USER_NAME = temp.User_Name;
+                        Constants.USER_PASSWORD_ENCRIPTED = temp.User_Passward;
+                        Constants.USER_NO = temp.User_No;
+                        Constants.USER_LEVEL = Convert.ToString(temp.User_Level);
+                    }
+                    return entity;
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static Teacher AuthecticateTeacherUser(Teacher userID)
+        {
+            try
+            {
+                var db = DB.CreateMainFMS();
+                Teacher entity = new Teacher();
+                var temp = db.SCH_Teacher.Where(u => u.Teacher_Name == userID.TeacherName && u.Password == userID.Password).FirstOrDefault();
+                if (temp != null)
+                {
+                    entity.TeacherID = temp.Teacher_ID;
+                    Constants.USER_ID = temp.Teacher_Name ?? "";
+                    Constants.USER_NAME = temp.Teacher_Name ?? "";
+                    Constants.USER_PWD = temp.Password ?? "";
+                    Constants.USER_NO = temp.Teacher_ID;
+                    //Constants.USER_LEVEL = temp.User_Level ?? "";
+
+                }
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<tbl_UserTypes> GetUserTypesList()
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                var userTypeslist = from c in db.tbl_UserTypes
+                                    select c;
+                return userTypeslist.ToList<tbl_UserTypes>();
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static int GetUserMaxNo()
+        {
+            try
+            {
+                var context = DB.CreateCommon();
+                {
+                    return (context.tbl_Users.Where(u => u.Site == Constants.SITE).Select(p => p.User_No).DefaultIfEmpty().Max()) + 1;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+        public static int SaveUser(User entity)
+        {
+            try
+            {
+                var _Entities = DB.CreateCommon();
+                {
+                    var temp = _Entities.tbl_Users.Where(u => u.User_No == entity.UserNo).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new tbl_Users();
+                        temp.User_No = entity.UserNo;
+                        temp.User_ID = entity.UserID;
+                        temp.User_Name = entity.UserName;
+                        temp.User_Passward = entity.UserPassward;
+                        temp.User_Level = entity.UserLevel;
+                        temp.User_Picture = entity.Picture;
+                        temp.Site = Constants.SITE;
+                        _Entities.tbl_Users.Add(temp);
+                        _Entities.SaveChanges();
+                    }
+                    else
+                    {
+                        temp.User_ID = entity.UserID;
+                        temp.User_Name = entity.UserName;
+                        temp.User_Passward = entity.UserPassward;
+                        temp.User_Level = entity.UserLevel;
+                        temp.User_Picture = entity.Picture;
+                        temp.Site = Constants.SITE;
+                        _Entities.SaveChanges();
+                    }
+
+                    return temp.User_No;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public static User EditUser(int userID)
+        {
+            try
+            {
+                var context = DB.CreateCommon();
+                {
+                    return context.tbl_Users.Where(u => u.User_No == userID).OrderByDescending(u => u.User_No).Take(1).Select(temp => new User
+                    {
+                        UserID = (string)temp.User_ID,
+                        UserName = (string)temp.User_Name,
+                        UserPassward = (string)temp.User_Passward,
+                        UserLevel = (string)temp.User_Level,
+                     Picture=temp.User_Picture,
+                    }).FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static bool DeleteUser(int userNo)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                db.Database.ExecuteSqlCommand("Delete from tbl_Users where User_No=" + userNo + "");
+                db.Database.ExecuteSqlCommand("DELETE FROM tbl_Users_Child WHERE User_No=" + userNo);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static void DeleteUserChild(int userNo)
+        {
+            var db = DB.CreateCommon();
+            db.Database.ExecuteSqlCommand("DELETE FROM tbl_Users_Child WHERE User_No=" + userNo);
+        }
+        public static void SaveUserChild(User entity)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                {
+                    var temp = new tbl_Users_Child();
+                    temp.User_No = entity.UserNo;
+                    temp.Software_Name = entity.SoftwareName;
+                    temp.Site = Constants.SITE;
+                    db.tbl_Users_Child.Add(temp);
+                    db.SaveChanges();
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+     
+        public static List<tbl_Users_Child> GetUserChild(int userNo)
+        {
+
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_Users_Child.Where(u => u.User_No == userNo).OrderBy(o => o.Serial_No).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        #endregion
+
+        #region User Rights
+        public static List<tbl_FormNames> GetFormNames(string software)
+        {
+
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_FormNames.Where(u => u.Software == software).OrderBy(o => o.ID).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void SaveUserRights(User entity)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                {
+                    var temp = db.tbl_UserRights.Where(u => u.User_ID == entity.UserID && u.Site == entity.Site && u.Name == entity.FormName && u.Year == entity.Year && u.Software == entity.Software).FirstOrDefault();
+                    if (temp == null)
+                    {
+                        temp = new tbl_UserRights();
+                        temp.User_ID = entity.UserID;
+                        temp.Year = entity.Year;
+                        temp.Software = entity.Software;
+                        temp.Name = entity.FormName;
+                        temp.Site = entity.Site;
+                        temp.Enter = entity.Enter;
+                        temp.Addition = entity.Addition;
+                        temp.Delition = entity.Deletion;
+                        temp.Updation = entity.Updation;
+                        db.tbl_UserRights.Add(temp);
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        //temp.User_ID = entity.UserID;
+                        //temp.Year = entity.Year;
+                        //temp.Software = entity.Software;
+                        temp.Name = entity.FormName;
+                        temp.Site = entity.Site;
+                        temp.Enter = entity.Enter;
+                        temp.Addition = entity.Addition;
+                        temp.Delition = entity.Deletion;
+                        temp.Updation = entity.Updation;
+                        db.SaveChanges();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        public static List<vew_UserRights> GetUserRights(string software)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                if (software == "HRMS" || software == "FMS")
+                    return (db.vew_UserRights.Where(u => u.User_ID == Constants.USER_ID && u.Site == Constants.SITE && u.Software == Constants.SOFTWARE).OrderBy(o => o.Name).ToList());
+                else
+                    return (db.vew_UserRights.Where(u => u.User_ID == Constants.USER_ID && u.Year == Constants.FINANCIAL_YEAR && u.Site == Constants.SITE && u.Software == Constants.SOFTWARE).OrderBy(o => o.Name).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static List<vew_UserRights> GetSavedRights(string Userid, string year, string software, string site)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                if (software == "HRMS" || software == "FMS")
+                    return (db.vew_UserRights.Where(u => u.User_ID == Userid && u.Software == software && u.Site == site).OrderBy(o => o.ID).ToList());
+                else
+                    return (db.vew_UserRights.Where(u => u.User_ID == Userid && u.Year == year && u.Software == software && u.Site == site).OrderBy(o => o.ID).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static User CheckUserRights()
+        {
+            try
+            {
+                var context = DB.CreateCommon();
+                if (Constants.USER_LEVEL != "A" && (Constants.SOFTWARE == "FMS" || Constants.SOFTWARE == "HRMS"))
+                {
+                    return context.vew_UserRights.Where(u => u.User_ID == Constants.USER_ID && u.Software == Constants.SOFTWARE && u.Site == Constants.SITE && u.Main_Name == Constants.MAIN_FORM_NAME).OrderByDescending(u => u.User_ID).Take(1).Select(temp => new User
+                    {
+                        Addition = temp.Addition ?? false,
+                        Updation = temp.Updation ?? false,
+                        Deletion = temp.Delition ?? false,
+                    }).FirstOrDefault();
+                }
+                else if (Constants.USER_LEVEL != "A")
+                {
+                    return context.vew_UserRights.Where(u => u.User_ID == Constants.USER_ID && u.Software == Constants.SOFTWARE && u.Year == Constants.FINANCIAL_YEAR && u.Site == Constants.SITE && u.Main_Name == Constants.MAIN_FORM_NAME).OrderByDescending(u => u.User_ID).Take(1).Select(temp => new User
+                    {
+                        Addition = temp.Addition ?? false,
+                        Updation = temp.Updation ?? false,
+                        Deletion = temp.Delition ?? false,
+                    }).FirstOrDefault();
+                }
+                else if (Constants.USER_LEVEL == "A")
+                {
+                    User user = new User();
+                    user.Addition = true;
+                    user.Updation = true;
+                    user.Deletion = true;
+                    return user;
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static bool DeleteUserRight(string Userid, string year, string software, string site, string rightsName)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                if (software == "HRMS" || software == "FMS")
+                    db.Database.ExecuteSqlCommand("Delete from tbl_UserRights where User_ID='" + Userid + "' and Name='" + rightsName + "' and software='" + software + "' and site='" + site + "'");
+                else
+                    db.Database.ExecuteSqlCommand("Delete from tbl_UserRights where User_ID='" + Userid + "' and Name='" + rightsName + "' and Year='" + year + "' and software='" + software + "' and site='" + site + "'");
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        public static void DeleteUserRight(string Userid, string year, string software, string site)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                if (software == "HRMS" || software == "FMS")
+                    db.Database.ExecuteSqlCommand("Delete from tbl_UserRights where User_ID='" + Userid + "' and software='" + software + "' and site='" + site + "'");
+                else
+                    db.Database.ExecuteSqlCommand("Delete from tbl_UserRights where User_ID='" + Userid + "' and Year='" + year + "' and software='" + software + "' and site='" + site + "'");
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        #endregion
+
+
+        #region Site
+        public static List<tbl_Sites> GetAllSites()
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                var siteslist = from c in db.tbl_Sites
+                                select c;
+
+                return siteslist.ToList<tbl_Sites>();
+
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+        public static Site InitializeSites(Site site)
+        {
+            try
+            {
+                var context = DB.CreateCommon();
+                {
+                    var temp = context.tbl_Sites.Where(u => u.Site.Trim() == site.SiteShort).FirstOrDefault();
+                    Site entity = new Site();
+                    if (temp != null)
+                    {
+                        entity.SiteShort = temp.Site;
+                        Constants.SITE = temp.Site;
+                        Constants.SITE_NAME = temp.Name;
+                        Constants.SITE_ADDRESS = temp.Address;
+                        Constants.SITE_PHONE = temp.Phone;
+                        Constants.SITE_EMAIL = temp.Email;
+                    }
+                    return entity;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+        public static void Get_SitesList()
+        {
+            try
+            {
+                List<Site> site = new List<Site>();
+                foreach (var temp in LoginDAL.GetAllSites())
+                {
+                    site.Add(new Site
+                    {
+                        SiteShort = temp.Site,
+                        SiteName = temp.Name,
+                        SiteAddress = temp.Address,
+                        SitePhone = temp.Phone,
+                        SiteEmail = temp.Email
+                    });
+                }
+                Constants.SitesList = site;
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+        #endregion
+
+        #region Password
+        public static String EncryptPassword(String text)
+        {
+            String encText = String.Empty;
+            int ascode = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                ascode = Convert.ToInt32(text[i]); //'Get the Asc Code of the Character stored in Reply
+                // encText += Convert.ToString(((ascode * 20)/2)-100);
+
+                if (i == 0)
+                    encText = Convert.ToString(Convert.ToInt32((Math.Ceiling(Convert.ToDouble((ascode * 29) / 3))) - 102), 16);
+                else
+                {
+                    //encText += "-" + Convert.ToString((((ascode * 29) / 3) - 102), 16);
+                    encText += "-" + Convert.ToString(Convert.ToInt32((Math.Ceiling(Convert.ToDouble((ascode * 29) / 3))) - 102), 16);
+                }
+            }
+            return encText;
+        }
+        public static String DeEncryptPassword(String text)
+        {
+            String decText = String.Empty;
+            String[] chunks = text.Split('-');
+
+            if (chunks != null && chunks.Length > 1)
+            {
+                foreach (String chunk in chunks)
+                {
+
+                    decText += Convert.ToChar(Convert.ToInt32(Math.Ceiling(((Convert.ToInt32(chunk, 16) + 102) * 3) / 29.0)));
+                }
+            }
+            return decText;
+        }
+        public static Boolean UpdatePassword(User entity)
+        {
+            try
+            {
+                var _Entities = DB.CreateCommon();
+                {
+                    var temp = _Entities.tbl_Users.Where(u => u.User_ID == Constants.USER_ID).FirstOrDefault();
+                    if (temp != null)
+                    {
+                        temp.User_Passward = entity.UserPassward;
+                        _Entities.SaveChanges();
+                        Constants.USER_PASSWORD_ENCRIPTED = entity.UserPassward;
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region Financial Year
+        public static List<tbl_FinancialYears> GetFinancialYears()
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_FinancialYears.OrderByDescending(o => o.Financial_Year).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+        public static void Get_FinancialYearsList()
+        {
+            try
+            {
+                List<Year> year = new List<Year>();
+                foreach (var temp in LoginDAL.GetFinancialYears())
+                {
+                    year.Add(new Year
+                    {
+                        Financial_Year = temp.Financial_Year,
+                      //  DataBaseName = temp.DataBase_Name
+                    });
+                }
+                Constants.FinancialYearsList = year;
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+        public static Year InitializeFinancialYear(Year fyear)
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                {
+                    var temp = db.tbl_FinancialYears.Where(u => u.Financial_Year.Trim() == fyear.Financial_Year).FirstOrDefault();
+                    Year entity = new Year();
+                    if (temp != null)
+                    {
+                        entity.Financial_Year = temp.Financial_Year ?? "";
+                        Constants.FINANCIAL_YEAR = temp.Financial_Year.Trim() ?? "";
+                        Constants.START_DATE = temp.Start_Date ?? DateTime.Now;
+                        Constants.END_DATE = temp.End_Date ?? DateTime.Now;
+                    }
+                    return entity;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                return null;
+            }
+        }
+        #endregion
+        #region Softwares
+        public static List<tbl_Softwares> GetSoftwaresList()
+        {
+            try
+            {
+                var db = DB.CreateCommon();
+                return (db.tbl_Softwares.OrderBy(o => o.Software_Name).ToList());
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        #endregion
+
+
+    }
+}
