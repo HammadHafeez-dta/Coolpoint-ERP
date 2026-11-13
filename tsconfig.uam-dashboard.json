@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": ["src/modules/user-management/pages/UamDashboardPage.tsx", "src/modules/user-management/pages/CreateUserPage.tsx", "src/modules/user-management/pages/ExistingUsersPage.tsx", "src/modules/user-management/pages/UserRightsPage.tsx", "src/vite-env.d.ts"]
+}

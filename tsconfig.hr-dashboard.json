@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [
+    "src/modules/hr/pages/HrDashboardPage.tsx",
+    "src/modules/hr/components/HrDashboardPanels.tsx",
+    "src/modules/hr/services/hrDashboardService.ts",
+    "src/modules/hr/utils/hrDashboard.ts",
+    "src/modules/user-management/pages/HRDashboard.tsx",
+    "src/vite-env.d.ts",
+    "src/modules/hr/pages/LeaveApprovalPage.tsx",
+    "src/modules/hr/pages/LeaveApplicationPage.tsx"
+  ]
+}

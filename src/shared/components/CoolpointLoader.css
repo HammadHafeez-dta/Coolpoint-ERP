@@ -1,0 +1,66 @@
+.coolpoint-loader {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #fff;
+  opacity: 1;
+  isolation: isolate;
+  animation: coolpoint-enter 240ms ease-out both;
+  transition: opacity 180ms ease-out;
+  outline: none;
+}
+
+.coolpoint-loader--fullscreen { position: fixed; inset: 0; z-index: 200; min-height: 100dvh; }
+.coolpoint-loader--content { position: absolute; inset: 0; z-index: 25; }
+.coolpoint-loader[data-phase="exiting"] { opacity: 0; animation: none; }
+.coolpoint-loader__logo { position: relative; width: min(286px, 100%); aspect-ratio: 286 / 60; }
+.coolpoint-loader__logo img { display: block; width: 100%; height: auto; user-select: none; }
+.coolpoint-loader__base {
+  filter: grayscale(1) drop-shadow(0 1px 0 #fff) drop-shadow(0 2px 1px rgb(23 24 88 / 13%));
+}
+.coolpoint-loader__color {
+  position: absolute; inset: 0;
+  clip-path: inset(0 100% 0 0);
+  animation: coolpoint-color 2500ms linear 1000ms forwards;
+}
+/* The PNG's actual alpha clips light to every original mark, including the tagline. */
+.coolpoint-loader__reflection, .coolpoint-loader__afterglow {
+  position: absolute; inset: 0; overflow: hidden;
+  mask: url('/coolpoint-logo-navy.png') center / 100% 100% no-repeat;
+  -webkit-mask: url('/coolpoint-logo-navy.png') center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.coolpoint-loader__reflection span, .coolpoint-loader__afterglow span {
+  display: block; position: absolute; inset: -25% 0; width: 18%;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 10%, rgb(212 246 255 / 15%) 35%, rgb(255 255 255 / 72%) 50%, rgb(212 246 255 / 15%) 65%, transparent 90%);
+  transform: translateX(-50%) skewX(-12deg);
+  animation: coolpoint-sweep 2500ms linear 1000ms forwards;
+}
+.coolpoint-loader__afterglow span { animation: coolpoint-glisten 6500ms ease-in-out 3500ms infinite both; opacity: 0; }
+.coolpoint-loader[data-complete] .coolpoint-loader__color { clip-path: inset(0); animation: none; }
+.coolpoint-loading-boundary { position: relative; min-width: 0; min-height: 220px; }
+.coolpoint-loading-boundary__content[data-loading] { visibility: hidden; }
+.coolpoint-loading-boundary--fill { flex: 1; min-height: 0; display: flex; }
+.coolpoint-loading-boundary--fill > .coolpoint-loading-boundary__content { display: flex; flex: 1; min-width: 0; }
+@keyframes coolpoint-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coolpoint-color { to { clip-path: inset(0); } }
+@keyframes coolpoint-sweep {
+  0% { opacity: 1; transform: translateX(-50%) skewX(-12deg); }
+  99% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(506%) skewX(-12deg); }
+}
+@keyframes coolpoint-glisten {
+  0% { opacity: 0; transform: translateX(-160%) skewX(-12deg); }
+  2% { opacity: .65; }
+  18% { opacity: .65; transform: translateX(660%) skewX(-12deg); }
+  20%, 100% { opacity: 0; transform: translateX(660%) skewX(-12deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coolpoint-loader { animation: none; transition-duration: 80ms; }
+  .coolpoint-loader__color { animation: none; clip-path: inset(0); }
+  .coolpoint-loader__reflection, .coolpoint-loader__afterglow { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .coolpoint-loader__logo { contain: layout style; }
+}

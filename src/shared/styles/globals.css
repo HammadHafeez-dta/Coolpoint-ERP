@@ -1,0 +1,398 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 220 60% 27%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 20% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 215 20% 94%;
+    --muted-foreground: 215 16% 38%;
+
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 220 60% 27%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 239 59% 14%;
+    --sidebar-foreground: 215 20% 75%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 239 59% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 239 59% 22%;
+    --sidebar-ring: 199 89% 48%;
+
+    --navy-dark: 239 59% 14%;
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 220 60% 15%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 220 60% 25%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+
+    --sidebar-background: 239 59% 8%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 239 59% 10%;
+    --sidebar-accent: 239 59% 14%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 239 59% 14%;
+    --sidebar-ring: 199 89% 48%;
+
+    --navy-dark: 239 59% 8%;
+  }
+}
+
+@layer base {
+  html {
+    font-size: 110%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Ensure HTML5 date/month/time picker styling and icons are pinned to the far right */
+  input[type="date"],
+  input[type="month"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="month"]::-webkit-datetime-edit,
+  input[type="datetime-local"]::-webkit-datetime-edit,
+  input[type="time"]::-webkit-datetime-edit {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Date/time inputs: show calendar icon pinned to right edge without squashing */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    margin-left: auto;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* Month inputs: month names (e.g. 'October 2026') are long and cause the calendar icon to clip/squash. Hide icon so text fits cleanly. */
+  input[type="month"]::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
+  /* Global sleek scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.35);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.6);
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.35) transparent;
+  }
+
+  /* Custom Sleek Dark Sidebar Scrollbar */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 9999px;
+  }
+
+  .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.8);
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+
+/* Keep the rail and page aligned while changing the available content width.
+   Mobile keeps a full-width drawer and only moves its transform. */
+.app-sidebar {
+  overflow-x: clip;
+  transition: width 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A single, quiet handoff from the workspace to the existing sign-in screen. */
+html.logout-transition::view-transition-old(root) {
+  animation: logout-view-out 160ms ease-out both;
+}
+html.logout-transition::view-transition-new(root) {
+  animation: logout-view-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+html.logout-transition::view-transition-group(root) {
+  animation-duration: 260ms;
+}
+@keyframes logout-view-out {
+  to { opacity: 0; }
+}
+@keyframes logout-view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.logout-transition::view-transition-old(root),
+  html.logout-transition::view-transition-new(root),
+  html.logout-transition::view-transition-group(root) {
+    animation: none;
+  }
+}
+.app-sidebar-main {
+  transition: margin-left 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hrms-shell {
+  --primary: var(--sidebar-background);
+  --primary-foreground: 0 0% 100%;
+  --accent: var(--sidebar-background);
+  --accent-foreground: 0 0% 100%;
+  --ring: var(--sidebar-background);
+  --sidebar-primary: var(--sidebar-background);
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-ring: var(--sidebar-background);
+}
+
+.hrms-shell .app-sidebar [data-sidebar-active="true"] {
+  background-color: hsl(var(--sidebar-accent));
+}
+
+.app-sidebar-backdrop {
+  transition: opacity 200ms ease-out;
+}
+.app-sidebar-label {
+  transition: opacity 140ms ease-out, max-width 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hrms-main > :is(div, section, article).h-screen {
+  height: calc(100dvh - 3rem);
+}
+
+.hrms-main > :is(div, section, article).min-h-screen {
+  min-height: calc(100dvh - 3rem);
+}
+
+.hrms-main > .min-h-full {
+  min-height: calc(100dvh - 3rem);
+}
+
+@media (max-width: 767px) {
+  .app-sidebar {
+    width: min(20rem, calc(100vw - 2rem));
+  }
+
+  .app-sidebar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .hrms-shell {
+    height: 100dvh;
+  }
+
+  .hrms-main {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+
+  .hrms-main > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .hrms-main > :is(div, section, article) > header {
+    height: auto;
+    min-height: 3.5rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .hrms-main > :is(div, section, article) > header > :last-child {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .hrms-main .p-6 {
+    padding: 1rem;
+  }
+
+  .hrms-main .px-6 {
+    padding-inline: 1rem;
+  }
+
+  .hrms-main .gap-6 {
+    gap: 1rem;
+  }
+
+  .hrms-main .grid-cols-2,
+  .hrms-main .grid-cols-3,
+  .hrms-main .grid-cols-6 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hrms-main .grid-cols-4,
+  .hrms-main .grid-cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hrms-main .flex.justify-between,
+  .hrms-main .flex.justify-end {
+    flex-wrap: wrap;
+  }
+
+  .hrms-main .overflow-x-auto {
+    max-width: 100%;
+    overscroll-behavior-x: contain;
+  }
+
+  .hrms-main .overflow-x-auto > table {
+    min-width: 38rem;
+  }
+
+  .hrms-main input,
+  .hrms-main select,
+  .hrms-main textarea {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .hrms-main .h-screen {
+    height: calc(100dvh - 3rem);
+  }
+
+  .hrms-main .min-h-screen {
+    min-height: calc(100dvh - 3rem);
+  }
+
+  [role="dialog"],
+  [role="alertdialog"] {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  [role="dialog"] .grid-cols-2,
+  [role="dialog"] .grid-cols-3,
+  [role="dialog"] .grid-cols-4,
+  [role="alertdialog"] .grid-cols-2,
+  [role="alertdialog"] .grid-cols-3,
+  [role="alertdialog"] .grid-cols-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar, .app-sidebar-main, .app-sidebar-label {
+    transition: none;
+  }
+  .app-sidebar-backdrop {
+    transition-duration: 80ms;
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": ["src/modules/crm/**/*.ts", "src/modules/crm/**/*.tsx", "src/vite-env.d.ts"]
+}

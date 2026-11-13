@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152" fill="none">
+  <!-- CoolPoint Official Royal Navy Emblem -->
+  <!-- Authentic incomplete infinity cooling loop matching coolpointintl.com -->
+  <circle cx="76" cy="76" r="75" fill="#171858" />
+  <path
+    d="M 64,61 C 59,57 55,56.5 49,56.5 C 37,56.5 28,65 28,76.5 C 28,88 37,96.5 49,96.5 C 60,96.5 68,90 76,76.5 C 84,63 92,56.5 103,56.5 C 115,56.5 124,65 124,76.5 C 124,88 115,96.5 103,96.5 C 92,96.5 84,90 76,76.5"
+    stroke="#FFFFFF"
+    stroke-width="11"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
